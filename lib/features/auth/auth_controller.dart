@@ -38,6 +38,60 @@ class AuthController extends AsyncNotifier<AuthUser?> {
     }
   }
 
+  /// Registers and returns the email used. No state change.
+  Future<String> register({
+    required String userName,
+    required String email,
+    required String password,
+    required String role,
+  }) {
+    return _repo.register(userName: userName, email: email, password: password, role: role);
+  }
+
+  /// Verifies the OTP. On success, sets the session.
+  Future<void> verifyEmail({required String email, required String otp}) async {
+    final user = await _repo.verifyEmail(email: email, otp: otp);
+    state = AsyncValue.data(user);
+  }
+
+  Future<void> resendOtp({required String email}) => _repo.resendOtp(email: email);
+
+  Future<void> forgotPassword({required String email}) => _repo.forgotPassword(email: email);
+
+  Future<void> resetPassword({
+    required String email,
+    required String otp,
+    required String newPassword,
+  }) =>
+      _repo.resetPassword(email: email, otp: otp, newPassword: newPassword);
+
+  /// Attempts a Google sign-in. Returns true if the user needs to
+  /// complete signup (choose username + role). Otherwise sets the
+  /// session and returns false.
+Future<String?> googleLogin() async {
+  final result = await _repo.googleLogin();
+
+  if (result.needsCompletion) {
+    return result.token; // caller routes to /social-complete
+  }
+
+  state = AsyncValue.data(result.user);
+  return null;
+}
+
+  Future<void> socialComplete({
+    required String pendingToken,
+    required String userName,
+    required String role,
+  }) async {
+    final user = await _repo.socialComplete(
+      pendingToken: pendingToken,
+      userName: userName,
+      role: role,
+    );
+    state = AsyncValue.data(user);
+  }
+
   Future<void> logout() async {
     await _repo.logout();
     state = const AsyncValue.data(null);

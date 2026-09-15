@@ -1,9 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'core/routes.dart';
 import 'core/theme.dart';
 import 'features/auth/auth_controller.dart';
+import 'features/auth/forgot_password_screen.dart';
 import 'features/auth/login_screen.dart';
+import 'features/auth/register_screen.dart';
+import 'features/auth/reset_password_screen.dart';
+import 'features/auth/social_complete_screen.dart';
+import 'features/auth/verify_otp_screen.dart';
 import 'features/home/home_screen.dart';
 
 class UzinduziApp extends ConsumerWidget {
@@ -15,13 +21,22 @@ class UzinduziApp extends ConsumerWidget {
       title: 'Uzinduzi',
       debugShowCheckedModeBanner: false,
       theme: uzinduziTheme(),
-      home: const _Root(),
+      initialRoute: AppRoutes.login,
+      routes: {
+        AppRoutes.login:          (_) => const _AuthGate(),
+        AppRoutes.register:       (_) => const RegisterScreen(),
+        AppRoutes.verifyOtp:      (_) => const VerifyOtpScreen(),
+        AppRoutes.forgotPassword: (_) => const ForgotPasswordScreen(),
+        AppRoutes.resetPassword:  (_) => const ResetPasswordScreen(),
+        AppRoutes.socialComplete: (_) => const SocialCompleteScreen(),
+        AppRoutes.home:           (_) => const HomeScreen(),
+      },
     );
   }
 }
 
-class _Root extends ConsumerWidget {
-  const _Root();
+class _AuthGate extends ConsumerWidget {
+  const _AuthGate();
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
