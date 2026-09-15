@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'core/theme.dart';
 import 'features/auth/auth_controller.dart';
 import 'features/auth/login_screen.dart';
 import 'features/home/home_screen.dart';
@@ -13,26 +14,8 @@ class UzinduziApp extends ConsumerWidget {
     return MaterialApp(
       title: 'Uzinduzi',
       debugShowCheckedModeBanner: false,
-      theme: _theme(),
+      theme: uzinduziTheme(),
       home: const _Root(),
-    );
-  }
-
-  ThemeData _theme() {
-    final scheme = ColorScheme.fromSeed(
-      seedColor: const Color(0xFFFF444F),
-      brightness: Brightness.light,
-    );
-    return ThemeData(
-      useMaterial3: true,
-      colorScheme: scheme,
-      scaffoldBackgroundColor: Colors.white,
-      appBarTheme: const AppBarTheme(
-        backgroundColor: Colors.white,
-        elevation: 0,
-        foregroundColor: Colors.black,
-        centerTitle: false,
-      ),
     );
   }
 }
@@ -46,7 +29,7 @@ class _Root extends ConsumerWidget {
 
     return auth.when(
       loading: () => const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
+        body: Center(child: CircularProgressIndicator(color: kUzinduziRed)),
       ),
       error: (err, _) => Scaffold(
         body: Center(child: Text('Startup error: $err')),

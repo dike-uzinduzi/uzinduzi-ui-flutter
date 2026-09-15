@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/errors.dart';
+import '../../core/theme.dart';
+import '../../widgets/uzinduzi_logo.dart';
 import 'auth_controller.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
@@ -39,7 +41,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       if (!mounted) return;
       final message = e is AppError ? e.message : 'Login failed';
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(message), backgroundColor: Colors.red.shade700),
+        SnackBar(content: Text(message), backgroundColor: kStatusFailed),
       );
     } finally {
       if (mounted) setState(() => _loading = false);
@@ -47,44 +49,46 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   }
 
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.white,
-      body: SafeArea(
-        child: Center(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+Widget build(BuildContext context) {
+  return Scaffold(
+    backgroundColor: kUzinduziWhite,
+    body: SafeArea(
+      child: Center(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 420),
             child: Form(
               key: _formKey,
               child: Column(
+                mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  const SizedBox(height: 40),
-                  const Text(
-                    'uzinduzi',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 36,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFFFF444F),
-                      letterSpacing: -1,
+                  const Center(
+                    child: UzinduziLogo(
+                      variant: LogoVariant.wordmark,
+                      height: 52,
                     ),
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 12),
                   const Text(
                     'Support African music. Earn physical plaques.',
                     textAlign: TextAlign.center,
-                    style: TextStyle(fontSize: 14, color: Colors.black54),
+                    style: TextStyle(fontSize: 14, color: kUzinduziGrey),
                   ),
                   const SizedBox(height: 48),
                   const Text(
                     'Welcome back',
-                    style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                    style: TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.w800,
+                      color: kUzinduziBlack,
+                    ),
                   ),
                   const SizedBox(height: 4),
                   const Text(
                     'Login to continue',
-                    style: TextStyle(fontSize: 14, color: Colors.black54),
+                    style: TextStyle(fontSize: 14, color: kUzinduziGrey),
                   ),
                   const SizedBox(height: 24),
                   TextFormField(
@@ -92,10 +96,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     keyboardType: TextInputType.emailAddress,
                     decoration: const InputDecoration(
                       labelText: 'Email',
-                      border: OutlineInputBorder(),
                       prefixIcon: Icon(Icons.email_outlined),
                     ),
-                    validator: (v) => (v == null || v.isEmpty) ? 'Email is required' : null,
+                    validator: (v) =>
+                        (v == null || v.isEmpty) ? 'Email is required' : null,
                   ),
                   const SizedBox(height: 16),
                   TextFormField(
@@ -103,27 +107,21 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     obscureText: _obscure,
                     decoration: InputDecoration(
                       labelText: 'Password',
-                      border: const OutlineInputBorder(),
                       prefixIcon: const Icon(Icons.lock_outline),
                       suffixIcon: IconButton(
-                        icon: Icon(_obscure ? Icons.visibility : Icons.visibility_off),
+                        icon: Icon(
+                            _obscure ? Icons.visibility : Icons.visibility_off),
                         onPressed: () => setState(() => _obscure = !_obscure),
                       ),
                     ),
-                    validator: (v) => (v == null || v.isEmpty) ? 'Password is required' : null,
+                    validator: (v) =>
+                        (v == null || v.isEmpty) ? 'Password is required' : null,
                   ),
                   const SizedBox(height: 24),
                   SizedBox(
                     height: 50,
                     child: ElevatedButton(
                       onPressed: _loading ? null : _submit,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFFFF444F),
-                        foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(50),
-                        ),
-                      ),
                       child: _loading
                           ? const SizedBox(
                               height: 22,
@@ -133,10 +131,15 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                 valueColor: AlwaysStoppedAnimation(Colors.white),
                               ),
                             )
-                          : const Text(
-                              'Login',
-                              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                            ),
+                          : const Text('Login'),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  const Center(
+                    child: Text(
+                      'By continuing you agree to our Terms and Privacy Policy',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(fontSize: 11, color: kUzinduziGrey),
                     ),
                   ),
                 ],
@@ -145,6 +148,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           ),
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 }
