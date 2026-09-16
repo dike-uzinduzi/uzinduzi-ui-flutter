@@ -88,7 +88,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     const Center(
-                      child: UzinduziLogo(variant: LogoVariant.wordmark, height: 44),
+                      child: UzinduziLogo(variant: LogoVariant.launchSymbol, height: 44),
                     ),
                     const SizedBox(height: 24),
                     const Text(

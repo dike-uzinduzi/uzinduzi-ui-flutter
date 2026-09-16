@@ -16,8 +16,8 @@ class LoginScreen extends ConsumerStatefulWidget {
 }
 
 class _LoginScreenState extends ConsumerState<LoginScreen> {
-  final _emailController = TextEditingController(text: 'fan@uzinduziafrica.com');
-  final _passwordController = TextEditingController(text: 'Password123!');
+  final _emailController = TextEditingController(text: '');
+  final _passwordController = TextEditingController(text: '');
   final _formKey = GlobalKey<FormState>();
   bool _loading = false;
   bool _googleLoading = false;
@@ -90,7 +90,7 @@ Future<void> _googleSignIn() async {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     const Center(
-                      child: UzinduziLogo(variant: LogoVariant.wordmark, height: 52),
+                      child: UzinduziLogo(variant: LogoVariant.launchSymbol, height: 52),
                     ),
                     const SizedBox(height: 12),
                     const Text(
