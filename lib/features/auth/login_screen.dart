@@ -94,7 +94,7 @@ Future<void> _googleSignIn() async {
                     ),
                     const SizedBox(height: 12),
                     const Text(
-                      'Support African music. Earn physical plaques.',
+                      'Launch Big, Grow Bigger',
                       textAlign: TextAlign.center,
                       style: TextStyle(fontSize: 14, color: kUzinduziGrey),
                     ),

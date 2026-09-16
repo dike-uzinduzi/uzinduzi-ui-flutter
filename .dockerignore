@@ -1,0 +1,7 @@
+android/
+ios/
+macos/
+windows/
+linux/
+.git/
+build/
