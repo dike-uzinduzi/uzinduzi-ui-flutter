@@ -5,5 +5,5 @@ String platformDefaultApiBase() {
   if (_override.isNotEmpty) return _override;
 
   // 2. Production default
-  return 'https://app.uzinduziafrica.com/api';
+  return 'https://apI.uzinduziafrica.com';
 }
