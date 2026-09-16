@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/errors.dart';
 import '../../core/theme.dart';
 import '../albums/plaque_tier_models.dart';
+import 'payment_pending_screen.dart';
 import 'support_providers.dart';
 import 'success_screen.dart';
 import 'widgets/order_summary.dart';
@@ -43,12 +46,16 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
   final _city = TextEditingController();
   final _postalCode = TextEditingController();
 
+  // EcoCash-specific phone (independent of shipping phone)
+  final _ecocashPhone = TextEditingController();
+
   String _country = 'Zimbabwe';
   String _paymentMethod = 'ECOCASH';
   bool _busy = false;
   String? _error;
 
   bool get _requiresShipping => widget.tier != null;
+  bool get _isEcocash => _paymentMethod == 'ECOCASH';
 
   @override
   void dispose() {
@@ -59,14 +66,24 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
     _addressLine2.dispose();
     _city.dispose();
     _postalCode.dispose();
+    _ecocashPhone.dispose();
     super.dispose();
   }
 
   Future<void> _submit() async {
     setState(() => _error = null);
 
+    // 1. Shipping validation
     if (_requiresShipping) {
       if (!_formKey.currentState!.validate()) return;
+    }
+
+    // 2. EcoCash phone required
+    if (_isEcocash &&
+        _ecocashPhone.text.trim().isEmpty &&
+        _phone.text.trim().isEmpty) {
+      setState(() => _error = 'Enter your EcoCash phone number');
+      return;
     }
 
     setState(() => _busy = true);
@@ -86,25 +103,65 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
         };
       }
 
+      // Prefer the EcoCash phone, fall back to the shipping phone
+      final phoneForPayment = _isEcocash
+          ? (_ecocashPhone.text.trim().isNotEmpty
+              ? _ecocashPhone.text.trim()
+              : _phone.text.trim())
+          : _phone.text.trim();
+
       final result = await ref.read(supportRepositoryProvider).support(
             albumId: widget.albumId,
             amount: widget.amount,
             currency: 'USD',
             paymentMethod: _paymentMethod,
-            customerPhone: _phone.text.trim().isEmpty ? null : _phone.text.trim(),
+            customerPhone: phoneForPayment.isEmpty ? null : phoneForPayment,
             shippingAddress: shipping,
           );
 
       if (!mounted) return;
 
+      // Demo: instant success
+      if (result.demo) {
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(
+            builder: (_) => SuccessScreen(
+              albumTitle: widget.albumTitle,
+              artistName: widget.artistName,
+              tier: widget.tier,
+              amount: widget.amount,
+              result: result,
+              shippingAddress: shipping,
+            ),
+          ),
+        );
+        return;
+      }
+
+      // Real path
+      if (result.referenceNumber == null) {
+        throw Exception('Missing payment reference');
+      }
+
+      if (result.needsRedirect) {
+        await launchUrl(
+          Uri.parse(result.redirectUrl!),
+          webOnlyWindowName: '_blank',
+          mode: LaunchMode.externalApplication,
+        );
+        if (!mounted) return;
+      }
+
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(
-          builder: (_) => SuccessScreen(
+          builder: (_) => PaymentPendingScreen(
+            albumId: widget.albumId,
             albumTitle: widget.albumTitle,
             artistName: widget.artistName,
+            coverArt: widget.coverArt,
             tier: widget.tier,
             amount: widget.amount,
-            result: result,
+            referenceNumber: result.referenceNumber!,
             shippingAddress: shipping,
           ),
         ),
@@ -149,6 +206,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
               ),
               const SizedBox(height: 24),
 
+              // Shipping form (only when a plaque ships)
               if (_requiresShipping) ...[
                 ShippingForm(
                   formKey: _formKey,
@@ -187,10 +245,61 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                 const SizedBox(height: 24),
               ],
 
+              // Payment method
               PaymentPicker(
                 value: _paymentMethod,
                 onChanged: (v) => setState(() => _paymentMethod = v),
               ),
+
+              // EcoCash phone field (only when EcoCash selected)
+              if (_isEcocash) ...[
+                const SizedBox(height: 20),
+                Container(
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: kUzinduziRed.withValues(alpha: 0.05),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: kUzinduziRed.withValues(alpha: 0.15)),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Row(
+                        children: [
+                          Icon(Icons.phone_android, color: kUzinduziRed, size: 18),
+                          SizedBox(width: 8),
+                          Text(
+                            'EcoCash number',
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w800,
+                              color: kUzinduziBlack,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 4),
+                      const Text(
+                        'Pesepay will send a payment prompt to this number.',
+                        style: TextStyle(fontSize: 12, color: kUzinduziGrey),
+                      ),
+                      const SizedBox(height: 12),
+                      TextFormField(
+                        controller: _ecocashPhone,
+                        keyboardType: TextInputType.phone,
+                        inputFormatters: [
+                          FilteringTextInputFormatter.allow(RegExp(r'[\d+\s-]')),
+                        ],
+                        decoration: const InputDecoration(
+                          labelText: 'EcoCash number',
+                          hintText: '+263771234567',
+                          prefixIcon: Icon(Icons.phone_outlined),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
 
               const SizedBox(height: 24),
 
@@ -217,28 +326,28 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                   ),
                 ),
 
-           SizedBox(
-  height: 52,
-  child: ElevatedButton(
-    onPressed: _busy ? null : _submit,
-    child: _busy
-        ? const SizedBox(
-            height: 22,
-            width: 22,
-            child: CircularProgressIndicator(
-              strokeWidth: 2.5,
-              valueColor: AlwaysStoppedAnimation(Colors.white),
-            ),
-          )
-        : Text(
-            'Pay \$${widget.amount.toStringAsFixed(2)}',
-            style: const TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-  ),
-),
+              SizedBox(
+                height: 52,
+                child: ElevatedButton(
+                  onPressed: _busy ? null : _submit,
+                  child: _busy
+                      ? const SizedBox(
+                          height: 22,
+                          width: 22,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2.5,
+                            valueColor: AlwaysStoppedAnimation(Colors.white),
+                          ),
+                        )
+                      : Text(
+                          'Pay \$${widget.amount.toStringAsFixed(2)}',
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                ),
+              ),
               const SizedBox(height: 24),
             ],
           ),
