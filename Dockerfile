@@ -1,5 +1,5 @@
 # Stage 1: Build Flutter web assets
-FROM ghcr.io/cirruslabs/flutter:3.44.0 AS builder
+FROM ghcr.io/cirruslabs/flutter:3.47.4 AS builder
 
 WORKDIR /app
 
