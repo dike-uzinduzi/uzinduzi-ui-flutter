@@ -50,3 +50,9 @@ app.*.map.json
 node_modules/
 backup-*.sql
 *.log
+# Web-only repo — exclude native platform folders
+/android/
+/ios/
+/macos/
+/windows/
+/linux/
