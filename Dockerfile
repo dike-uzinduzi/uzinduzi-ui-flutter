@@ -5,6 +5,9 @@ WORKDIR /app
 
 # Copy pubspec files first for dependency caching
 COPY pubspec.* ./
+
+# Give the flutter user ownership of the app directory
+RUN chown -R flutter:flutter /app
 RUN flutter pub get
 
 # Copy the rest of the source code
