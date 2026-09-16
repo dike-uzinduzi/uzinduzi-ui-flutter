@@ -10,7 +10,8 @@ import 'features/auth/register_screen.dart';
 import 'features/auth/reset_password_screen.dart';
 import 'features/auth/social_complete_screen.dart';
 import 'features/auth/verify_otp_screen.dart';
-import 'features/home/home_screen.dart';
+import 'features/home/home_shell.dart';
+import 'features/notifications/notifications_screen.dart';
 
 class UzinduziApp extends ConsumerWidget {
   const UzinduziApp({super.key});
@@ -29,7 +30,8 @@ class UzinduziApp extends ConsumerWidget {
         AppRoutes.forgotPassword: (_) => const ForgotPasswordScreen(),
         AppRoutes.resetPassword:  (_) => const ResetPasswordScreen(),
         AppRoutes.socialComplete: (_) => const SocialCompleteScreen(),
-        AppRoutes.home:           (_) => const HomeScreen(),
+        AppRoutes.home:           (_) => const HomeShell(),
+        AppRoutes.notifications:  (_) => const NotificationsScreen(),
       },
     );
   }
@@ -51,7 +53,7 @@ class _AuthGate extends ConsumerWidget {
       ),
       data: (user) {
         if (user == null) return const LoginScreen();
-        return const HomeScreen();
+        return const HomeShell();
       },
     );
   }

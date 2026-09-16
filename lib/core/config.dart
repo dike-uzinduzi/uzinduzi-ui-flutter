@@ -26,5 +26,5 @@ class AppConfig {
 
   static const String defaultAvatar     = '$cdnBase/placeholders/avatar-default.png';
   static const String defaultCover      = '$cdnBase/placeholders/cover-default.jpg';
-  static const String defaultAlbumCover = '$cdnBase/placeholders/album-cover-default.jpg';
+  static const String defaultAlbumCover = '$cdnBase/placeholders/album-cover-default.png';
 }

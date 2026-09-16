@@ -9,50 +9,37 @@ const kUzinduziSurface = Color(0xFFFFFFFF);
 const kUzinduziDivider = Color(0xFFEAEAEA);
 
 // ─── Status ─────────────────────────────────────────────────
-const kStatusLive      = Color(0xFF006633); // emerald green — "active"
-const kStatusEnded     = Color(0xFF8A8A8E); // grey
-const kStatusScheduled = Color(0xFF996633); // gold-brown — "upcoming"
+const kStatusLive      = Color(0xFF006633);
+const kStatusEnded     = Color(0xFF8A8A8E);
+const kStatusScheduled = Color(0xFF996633);
 const kStatusPending   = Color(0xFF996633);
 const kStatusFailed    = Color(0xFF660000);
 
 // ─── Plaque tiers ───────────────────────────────────────────
-const kTierSilver   = Color(0xFF999999);
-const kTierGold     = Color(0xFF996633);
+const kTierWood     = Color(0xFF6B4423);
+const kTierCrimson  = Color(0xFF660000);
 const kTierSapphire = Color(0xFF000066);
 const kTierEmerald  = Color(0xFF006633);
-const kTierCrimson  = Color(0xFF660000);
+const kTierSilver   = Color(0xFF999999);
+const kTierGold     = Color(0xFF996633);
 
 /// Resolve a plaque tier name to its brand colour.
 Color tierColor(String? tier) {
   switch ((tier ?? '').toUpperCase()) {
-    case 'SILVER':   return kTierSilver;
-    case 'GOLD':     return kTierGold;
+    case 'WOOD':     return kTierWood;
+    case 'CRIMSON':  return kTierCrimson;
     case 'SAPPHIRE': return kTierSapphire;
     case 'EMERALD':  return kTierEmerald;
-    case 'CRIMSON':  return kTierCrimson;
+    case 'SILVER':   return kTierSilver;
+    case 'GOLD':     return kTierGold;
     default:         return kUzinduziGrey;
   }
 }
 
-/// Minimum contribution (USD) for each tier.
-/// Kept client-side for preview only — the server is authoritative.
-const kTierThresholds = <String, double>{
-  'SILVER':   51,
-  'GOLD':     150,
-  'SAPPHIRE': 300,
-  'EMERALD':  600,
-  'CRIMSON':  1000,
-};
-
-/// Which tier an amount qualifies for, or null if below the lowest tier.
-String? tierForAmount(double amount) {
-  // Highest threshold first
-  const order = ['CRIMSON', 'EMERALD', 'SAPPHIRE', 'GOLD', 'SILVER'];
-  for (final tier in order) {
-    if (amount >= (kTierThresholds[tier] ?? double.infinity)) return tier;
-  }
-  return null;
-}
+// NOTE: tier thresholds and tier resolution now come from the
+// /api/plaque-tiers endpoint. See lib/features/albums/tiers_provider.dart.
+// Do not reintroduce a client-side threshold map here — the server is
+// authoritative.
 
 // ─── Theme ──────────────────────────────────────────────────
 ThemeData uzinduziTheme() {

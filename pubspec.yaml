@@ -10,12 +10,12 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-
+   
   cupertino_icons: ^1.0.8
 
   # State
   flutter_riverpod: ^2.6.1
-
+  share_plus: ^10.1.1
   # HTTP + secure storage
   dio: ^5.7.0
   flutter_secure_storage: ^9.2.2
