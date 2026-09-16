@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:share_plus/share_plus.dart';
-
+import '../support/checkout_screen.dart';
 import '../../core/theme.dart';
 import 'album_detail_provider.dart';
 import 'album_models.dart';
@@ -75,15 +75,20 @@ class _AlbumDetailScreenState extends ConsumerState<AlbumDetailScreen> {
     });
   }
 
-  void _onSupport(Album album, PlaqueTier? tier, double amount) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          'Checkout for \$${amount.toStringAsFixed(0)} — coming in M2c',
-        ),
+void _onSupport(Album album, PlaqueTier? tier, double amount) {
+  Navigator.of(context).push(
+    MaterialPageRoute(
+      builder: (_) => CheckoutScreen(
+        albumId: album.id,
+        albumTitle: album.title,
+        artistName: album.artist?.name ?? 'the artist',
+        coverArt: album.coverArt,
+        tier: tier,
+        amount: amount,
       ),
-    );
-  }
+    ),
+  );
+}
 
   @override
   Widget build(BuildContext context) {
@@ -175,7 +180,7 @@ class _AlbumDetailScreenState extends ConsumerState<AlbumDetailScreen> {
                                   
                                   selectedTierProvider(widget.albumId),
                                 );
-                                debugPrint('TIER PREVIEW BUILD: tier=${tier?.slug}');
+                         
                                 return TierPreview(tier: tier);
                               },
                             ),
