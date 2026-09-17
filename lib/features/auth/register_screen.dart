@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/errors.dart';
 import '../../core/routes.dart';
 import '../../core/theme.dart';
+import '../../widgets/auth_error_dialog.dart';
 import '../../widgets/role_picker.dart';
 import '../../widgets/uzinduzi_logo.dart';
 import 'auth_controller.dart';
@@ -56,9 +57,15 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
       );
     } catch (e) {
       if (!mounted) return;
-      final message = e is AppError ? e.message : 'Registration failed';
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(message), backgroundColor: kStatusFailed),
+      final message = e is AppError
+          ? e.message
+          : 'We couldn\'t create your account. Please try again.';
+
+      await AuthErrorDialog.show(
+        context,
+        title: 'Registration failed',
+        message: message,
+        retryLabel: 'Try again',
       );
     } finally {
       if (mounted) setState(() => _loading = false);
@@ -88,7 +95,10 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     const Center(
-                      child: UzinduziLogo(variant: LogoVariant.launchSymbol, height: 44),
+                      child: UzinduziLogo(
+                        variant: LogoVariant.launchSymbol,
+                        height: 44,
+                      ),
                     ),
                     const SizedBox(height: 24),
                     const Text(
@@ -107,12 +117,15 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                     const SizedBox(height: 24),
                     TextFormField(
                       controller: _userNameController,
+                      enabled: !_loading,
                       decoration: const InputDecoration(
                         labelText: 'Username',
                         prefixIcon: Icon(Icons.person_outline),
                       ),
                       validator: (v) {
-                        if (v == null || v.trim().isEmpty) return 'Username is required';
+                        if (v == null || v.trim().isEmpty) {
+                          return 'Username is required';
+                        }
                         if (v.trim().length < 3) return 'At least 3 characters';
                         if (!RegExp(r'^[a-zA-Z0-9._]+$').hasMatch(v.trim())) {
                           return 'Letters, numbers, dot, underscore only';
@@ -124,13 +137,17 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                     TextFormField(
                       controller: _emailController,
                       keyboardType: TextInputType.emailAddress,
+                      enabled: !_loading,
                       decoration: const InputDecoration(
                         labelText: 'Email',
                         prefixIcon: Icon(Icons.email_outlined),
                       ),
                       validator: (v) {
-                        if (v == null || v.trim().isEmpty) return 'Email is required';
-                        if (!RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(v.trim())) {
+                        if (v == null || v.trim().isEmpty) {
+                          return 'Email is required';
+                        }
+                        if (!RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$')
+                            .hasMatch(v.trim())) {
                           return 'Enter a valid email';
                         }
                         return null;
@@ -140,16 +157,22 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                     TextFormField(
                       controller: _passwordController,
                       obscureText: _obscure,
+                      enabled: !_loading,
                       decoration: InputDecoration(
                         labelText: 'Password',
                         prefixIcon: const Icon(Icons.lock_outline),
                         suffixIcon: IconButton(
-                          icon: Icon(_obscure ? Icons.visibility : Icons.visibility_off),
-                          onPressed: () => setState(() => _obscure = !_obscure),
+                          icon: Icon(_obscure
+                              ? Icons.visibility
+                              : Icons.visibility_off),
+                          onPressed: () =>
+                              setState(() => _obscure = !_obscure),
                         ),
                       ),
                       validator: (v) {
-                        if (v == null || v.isEmpty) return 'Password is required';
+                        if (v == null || v.isEmpty) {
+                          return 'Password is required';
+                        }
                         if (v.length < 8) return 'At least 8 characters';
                         return null;
                       },
@@ -179,7 +202,9 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                                 width: 22,
                                 child: CircularProgressIndicator(
                                   strokeWidth: 2.5,
-                                  valueColor: AlwaysStoppedAnimation(Colors.white),
+                                  valueColor: AlwaysStoppedAnimation(
+                                    Colors.white,
+                                  ),
                                 ),
                               )
                             : const Text('Create account'),

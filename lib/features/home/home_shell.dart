@@ -17,74 +17,114 @@ class HomeShell extends StatefulWidget {
 class _HomeShellState extends State<HomeShell> {
   int _index = 0;
 
-  static const _tabs = [
+  static const _tabs = <Widget>[
     HomeTab(),
     AlbumsTab(),
     PlaquesTab(),
     ProfileTab(),
   ];
 
+  static const _navItems = <_NavItem>[
+    _NavItem(
+      icon: Icons.home_outlined,
+      activeIcon: Icons.home,
+      label: 'Home',
+    ),
+    _NavItem(
+      icon: Icons.album_outlined,
+      activeIcon: Icons.album,
+      label: 'Albums',
+    ),
+    _NavItem(
+      icon: Icons.workspace_premium_outlined,
+      activeIcon: Icons.workspace_premium,
+      label: 'Plaques',
+    ),
+    _NavItem(
+      icon: Icons.person_outline,
+      activeIcon: Icons.person,
+      label: 'Profile',
+    ),
+  ];
+
+  static const _sidebarBreakpoint = 900.0;
+
+  void _select(int i) {
+    if (i == _index) return;
+    setState(() => _index = i);
+  }
+
   @override
   Widget build(BuildContext context) {
-    final width = MediaQuery.of(context).size.width;
-    final useSidebar = width >= 900;
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final useSidebar = constraints.maxWidth >= _sidebarBreakpoint;
+        final body = IndexedStack(index: _index, children: _tabs);
 
-    if (useSidebar) {
-      return Scaffold(
-        backgroundColor: kUzinduziWhite,
-        body: Row(
-          children: [
-            AppSidebar(
-              currentIndex: _index,
-              onTap: (i) => setState(() => _index = i),
+        if (useSidebar) {
+          return Scaffold(
+            backgroundColor: kUzinduziWhite,
+            body: Row(
+              children: [
+                AppSidebar(currentIndex: _index, onTap: _select),
+                const VerticalDivider(width: 1, color: kUzinduziDivider),
+                Expanded(child: body),
+              ],
             ),
-            Expanded(
-              child: IndexedStack(index: _index, children: _tabs),
-            ),
-          ],
-        ),
-      );
-    }
+          );
+        }
 
-    return Scaffold(
-      body: IndexedStack(index: _index, children: _tabs),
-      bottomNavigationBar: Container(
-        decoration: const BoxDecoration(
-          border: Border(top: BorderSide(color: kUzinduziDivider)),
-        ),
-        child: BottomNavigationBar(
-          currentIndex: _index,
-          onTap: (i) => setState(() => _index = i),
-          type: BottomNavigationBarType.fixed,
+        return Scaffold(
           backgroundColor: kUzinduziWhite,
-          selectedItemColor: kUzinduziRed,
-          unselectedItemColor: kUzinduziGrey,
-          selectedLabelStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 11),
-          unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w600, fontSize: 11),
-          items: const [
-            BottomNavigationBarItem(
-              icon: Icon(Icons.home_outlined),
-              activeIcon: Icon(Icons.home),
-              label: 'Home',
+          body: body,
+          bottomNavigationBar: Container(
+            decoration: const BoxDecoration(
+              border: Border(top: BorderSide(color: kUzinduziDivider)),
+              color: kUzinduziWhite,
             ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.album_outlined),
-              activeIcon: Icon(Icons.album),
-              label: 'Albums',
+            child: SafeArea(
+              top: false,
+              child: BottomNavigationBar(
+                currentIndex: _index,
+                onTap: _select,
+                type: BottomNavigationBarType.fixed,
+                elevation: 0,
+                backgroundColor: kUzinduziWhite,
+                selectedItemColor: kUzinduziRed,
+                unselectedItemColor: kUzinduziGrey,
+                selectedLabelStyle: const TextStyle(
+                  fontWeight: FontWeight.w700,
+                  fontSize: 11,
+                ),
+                unselectedLabelStyle: const TextStyle(
+                  fontWeight: FontWeight.w600,
+                  fontSize: 11,
+                ),
+                items: [
+                  for (final item in _navItems)
+                    BottomNavigationBarItem(
+                      icon: Icon(item.icon),
+                      activeIcon: Icon(item.activeIcon),
+                      label: item.label,
+                    ),
+                ],
+              ),
             ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.workspace_premium_outlined),
-              activeIcon: Icon(Icons.workspace_premium),
-              label: 'Plaques',
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.person_outline),
-              activeIcon: Icon(Icons.person),
-              label: 'Profile',
-            ),
-          ],
-        ),
-      ),
+          ),
+        );
+      },
     );
   }
+}
+
+class _NavItem {
+  final IconData icon;
+  final IconData activeIcon;
+  final String label;
+
+  const _NavItem({
+    required this.icon,
+    required this.activeIcon,
+    required this.label,
+  });
 }

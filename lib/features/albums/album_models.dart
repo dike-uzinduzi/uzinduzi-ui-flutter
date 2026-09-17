@@ -1,3 +1,5 @@
+import '../../../core/config.dart';
+
 class Album {
   final String id;
   final String title;
@@ -7,6 +9,10 @@ class Album {
   final int trackCount;
   final int duration;
   final bool isDemo;
+  final bool isPublished;
+  final bool isFeatured;
+  final DateTime? releaseDate;
+  final List<String> genres;
   final Artist? artist;
   final AlbumLaunch? launch;
   final List<Track>? tracks;
@@ -20,6 +26,10 @@ class Album {
     this.trackCount = 0,
     this.duration = 0,
     this.isDemo = false,
+    this.isPublished = false,
+    this.isFeatured = false,
+    this.releaseDate,
+    this.genres = const [],
     this.artist,
     this.launch,
     this.tracks,
@@ -34,9 +44,17 @@ class Album {
         trackCount: (j['track_count'] as num?)?.toInt() ?? 0,
         duration: (j['duration'] as num?)?.toInt() ?? 0,
         isDemo: j['isDemo'] as bool? ?? false,
+        isPublished: j['is_published'] as bool? ?? false,
+        isFeatured: j['is_featured'] as bool? ?? false,
+        releaseDate: j['release_date'] != null
+            ? DateTime.tryParse(j['release_date'].toString())
+            : null,
+        genres: _parseGenres(j),
         artist: j['artist'] is Map
             ? Artist.fromJson(Map<String, dynamic>.from(j['artist'] as Map))
-            : null,
+            : j['Artist'] is Map
+                ? Artist.fromJson(Map<String, dynamic>.from(j['Artist'] as Map))
+                : null,
         launch: j['launch'] is Map
             ? AlbumLaunch.fromJson(Map<String, dynamic>.from(j['launch'] as Map))
             : null,
@@ -47,6 +65,49 @@ class Album {
                 .toList()
             : null,
       );
+
+  static List<String> _parseGenres(Map<String, dynamic> j) {
+    final raw = j['genres'] ?? j['Genres'];
+    if (raw is List) {
+      return raw
+          .map((g) => g is Map ? g['name']?.toString() : g?.toString())
+          .whereType<String>()
+          .where((s) => s.isNotEmpty)
+          .toList();
+    }
+    return const [];
+  }
+
+  // ── Computed helpers ────────────────────────────────────
+
+  String get artistName => artist?.name ?? 'Unknown artist';
+
+  String get coverImage {
+    final raw = coverArt;
+    if (raw == null || raw.isEmpty) return AppConfig.defaultAlbumCover;
+    if (raw.startsWith('http')) return raw;
+    return '${AppConfig.cdnBase}/$raw';
+  }
+
+  bool get isLive => isPublished || (launch?.isActive ?? false);
+
+  String get releaseDateFormatted {
+    final d = releaseDate;
+    if (d == null) return '—';
+    return '${_month(d.month)} ${d.day}, ${d.year}';
+  }
+
+  String get durationLabel {
+    final h = duration ~/ 3600;
+    final m = (duration % 3600) ~/ 60;
+    if (h > 0) return '${h}h ${m}m';
+    return '${m}m';
+  }
+
+  static String _month(int m) => const [
+        'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+        'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+      ][m - 1];
 }
 
 class Artist {

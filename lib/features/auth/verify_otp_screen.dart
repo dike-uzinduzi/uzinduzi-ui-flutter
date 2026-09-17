@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/errors.dart';
 import '../../core/routes.dart';
 import '../../core/theme.dart';
+import '../../widgets/auth_error_dialog.dart';
 import '../../widgets/otp_input.dart';
 import 'auth_controller.dart';
 
@@ -43,7 +44,10 @@ class _VerifyOtpScreenState extends ConsumerState<VerifyOtpScreen> {
     _cooldown = seconds;
     _timer?.cancel();
     _timer = Timer.periodic(const Duration(seconds: 1), (t) {
-      if (!mounted) { t.cancel(); return; }
+      if (!mounted) {
+        t.cancel();
+        return;
+      }
       setState(() {
         _cooldown--;
         if (_cooldown <= 0) t.cancel();
@@ -56,14 +60,22 @@ class _VerifyOtpScreenState extends ConsumerState<VerifyOtpScreen> {
     setState(() => _loading = true);
 
     try {
-      await ref.read(authControllerProvider.notifier).verifyEmail(email: _email, otp: code);
+      await ref
+          .read(authControllerProvider.notifier)
+          .verifyEmail(email: _email, otp: code);
       if (!mounted) return;
-      Navigator.of(context).pushNamedAndRemoveUntil(AppRoutes.home, (_) => false);
+      Navigator.of(context)
+          .pushNamedAndRemoveUntil(AppRoutes.home, (_) => false);
     } catch (e) {
       if (!mounted) return;
-      final message = e is AppError ? e.message : 'Verification failed';
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(message), backgroundColor: kStatusFailed),
+      final message =
+          e is AppError ? e.message : 'We couldn\'t verify that code. Please try again.';
+
+      await AuthErrorDialog.show(
+        context,
+        title: 'Verification failed',
+        message: message,
+        retryLabel: 'Try again',
       );
     } finally {
       if (mounted) setState(() => _loading = false);
@@ -78,14 +90,20 @@ class _VerifyOtpScreenState extends ConsumerState<VerifyOtpScreen> {
       await ref.read(authControllerProvider.notifier).resendOtp(email: _email);
       if (!mounted) return;
       _startCooldown(60);
+      // Non-error notification — SnackBar is appropriate here
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('New code sent')),
+        const SnackBar(content: Text('A new code has been sent to your email.')),
       );
     } catch (e) {
       if (!mounted) return;
-      final message = e is AppError ? e.message : 'Could not resend';
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(message), backgroundColor: kStatusFailed),
+      final message =
+          e is AppError ? e.message : 'We couldn\'t resend the code. Please try again.';
+
+      await AuthErrorDialog.show(
+        context,
+        title: 'Couldn\'t resend',
+        message: message,
+        retryLabel: 'OK',
       );
     } finally {
       if (mounted) setState(() => _resending = false);
@@ -128,16 +146,16 @@ class _VerifyOtpScreenState extends ConsumerState<VerifyOtpScreen> {
                   const SizedBox(height: 36),
                   OtpInput(
                     onCompleted: _verify,
-                    onChanged: (v) {
-                      // Auto-submit when all filled? Already handled via onCompleted
-                    },
                   ),
                   const SizedBox(height: 28),
                   if (_loading)
                     const SizedBox(
                       width: 24,
                       height: 24,
-                      child: CircularProgressIndicator(strokeWidth: 2.5, color: kUzinduziRed),
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2.5,
+                        color: kUzinduziRed,
+                      ),
                     )
                   else
                     TextButton(

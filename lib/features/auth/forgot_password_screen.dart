@@ -4,13 +4,15 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/errors.dart';
 import '../../core/routes.dart';
 import '../../core/theme.dart';
+import '../../widgets/auth_error_dialog.dart';
 import 'auth_controller.dart';
 
 class ForgotPasswordScreen extends ConsumerStatefulWidget {
   const ForgotPasswordScreen({super.key});
 
   @override
-  ConsumerState<ForgotPasswordScreen> createState() => _ForgotPasswordScreenState();
+  ConsumerState<ForgotPasswordScreen> createState() =>
+      _ForgotPasswordScreenState();
 }
 
 class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
@@ -31,7 +33,9 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
     final email = _emailController.text.trim().toLowerCase();
 
     try {
-      await ref.read(authControllerProvider.notifier).forgotPassword(email: email);
+      await ref
+          .read(authControllerProvider.notifier)
+          .forgotPassword(email: email);
       if (!mounted) return;
       Navigator.of(context).pushNamed(
         AppRoutes.resetPassword,
@@ -39,9 +43,15 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
       );
     } catch (e) {
       if (!mounted) return;
-      final message = e is AppError ? e.message : 'Could not send reset code';
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(message), backgroundColor: kStatusFailed),
+      final message = e is AppError
+          ? e.message
+          : 'We couldn\'t send a reset code. Please try again.';
+
+      await AuthErrorDialog.show(
+        context,
+        title: 'Couldn\'t send code',
+        message: message,
+        retryLabel: 'Try again',
       );
     } finally {
       if (mounted) setState(() => _loading = false);
@@ -87,13 +97,17 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
                     TextFormField(
                       controller: _emailController,
                       keyboardType: TextInputType.emailAddress,
+                      enabled: !_loading,
                       decoration: const InputDecoration(
                         labelText: 'Email',
                         prefixIcon: Icon(Icons.email_outlined),
                       ),
                       validator: (v) {
-                        if (v == null || v.trim().isEmpty) return 'Email is required';
-                        if (!RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(v.trim())) {
+                        if (v == null || v.trim().isEmpty) {
+                          return 'Email is required';
+                        }
+                        if (!RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$')
+                            .hasMatch(v.trim())) {
                           return 'Enter a valid email';
                         }
                         return null;
@@ -110,7 +124,9 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
                                 width: 22,
                                 child: CircularProgressIndicator(
                                   strokeWidth: 2.5,
-                                  valueColor: AlwaysStoppedAnimation(Colors.white),
+                                  valueColor: AlwaysStoppedAnimation(
+                                    Colors.white,
+                                  ),
                                 ),
                               )
                             : const Text('Send reset code'),

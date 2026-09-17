@@ -87,7 +87,7 @@ class NotificationsScreen extends ConsumerWidget {
             if (list.isEmpty) return const _EmptyNotifications();
             return Center(
               child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 900),
+                constraints: const BoxConstraints(maxWidth: 1200),
                 child: ListView.separated(
                   padding: const EdgeInsets.symmetric(vertical: 8),
                   itemCount: list.length,

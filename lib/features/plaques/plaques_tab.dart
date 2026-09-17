@@ -53,7 +53,7 @@ class PlaquesTab extends ConsumerWidget {
             if (list.isEmpty) return const _EmptyPlaques();
             return Center(
               child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 900),
+                constraints: const BoxConstraints(maxWidth: 1200),
                 child: ListView.separated(
                   padding: const EdgeInsets.all(16),
                   itemCount: list.length,

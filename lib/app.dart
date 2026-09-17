@@ -44,17 +44,22 @@ class _AuthGate extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final auth = ref.watch(authControllerProvider);
 
-    return auth.when(
-      loading: () => const Scaffold(
-        body: Center(child: CircularProgressIndicator(color: kUzinduziRed)),
-      ),
-      error: (err, _) => Scaffold(
-        body: Center(child: Text('Startup error: $err')),
-      ),
-      data: (user) {
-        if (user == null) return const LoginScreen();
-        return const HomeShell();
-      },
-    );
+    // Splash only during the very first bootstrap (before we know auth status)
+    if (auth.isLoading && !auth.hasValue) {
+      return const Scaffold(
+        body: Center(
+          child: CircularProgressIndicator(color: kUzinduziRed),
+        ),
+      );
+    }
+
+    // Any error or "no user" -> stay on the login screen.
+    // Login failures are shown via AuthErrorDialog inside LoginScreen.
+    final user = auth.valueOrNull;
+    if (user == null) {
+      return const LoginScreen();
+    }
+
+    return const HomeShell();
   }
 }

@@ -28,7 +28,7 @@ class HomeTab extends ConsumerWidget {
     return Scaffold(
       backgroundColor: kUzinduziWhite,
       appBar: AppBar(
-        title: const UzinduziLogo(variant: LogoVariant.launchSymbol, height: 28),
+        title: const UzinduziLogo(variant: LogoVariant.wordmark, height: 28),
         actions: [
           Padding(
             padding: const EdgeInsets.only(right: 8),
@@ -55,12 +55,12 @@ class HomeTab extends ConsumerWidget {
         },
         child: Center(
           child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 900),
+            constraints: const BoxConstraints(maxWidth: 1600),
             child: ListView(
               padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
               children: [
                 Text(
-                  'Welcome back, ${user?.userName ?? "there"} 👋',
+                  'Welcome back, ${user?.userName ?? "there"} ',
                   style: const TextStyle(
                     fontSize: 22,
                     fontWeight: FontWeight.w800,
@@ -79,23 +79,20 @@ class HomeTab extends ConsumerWidget {
                       return const _EmptyHero();
                     }
                     return Column(
-                      children: [
-                        SizedBox(
-                          height: 200,
-                          child: FeaturedAlbumHero(
-                            album: album,
-                           onSupport: () {
-  Navigator.of(context).push(
-    MaterialPageRoute(
-      builder: (_) => AlbumDetailScreen(albumId: album.id),
+  children: [
+    FeaturedAlbumHero(
+      album: album,
+      onSupport: () {
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (_) => AlbumDetailScreen(albumId: album.id),
+          ),
+        );
+      },
     ),
-  );
-},
-                          ),
-                        ),
-                        const SizedBox(height: 24),
-                      ],
-                    );
+    const SizedBox(height: 24),
+  ],
+);
                   },
                   loading: () => const Padding(
                     padding: EdgeInsets.symmetric(vertical: 60),
@@ -115,51 +112,69 @@ class HomeTab extends ConsumerWidget {
                   ),
                 ),
                 const SizedBox(height: 12),
-                GridView.count(
-                  crossAxisCount: 2,
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  crossAxisSpacing: 12,
-                  mainAxisSpacing: 12,
-                  childAspectRatio: 2.2,
-                  children: [
-                    HomeTile(
-                      icon: Icons.album_outlined,
-                      label: 'Albums',
-                      badgeCount: albums.maybeWhen(
-                        data: (a) => a.length,
-                        orElse: () => null,
-                      ),
-                      onTap: () {},
-                    ),
-                    HomeTile(
-                      icon: Icons.podcasts,
-                      label: 'Live Now',
-                      accent: kStatusLive,
-                      badgeCount: liveCount.maybeWhen(
-                        data: (c) => c,
-                        orElse: () => null,
-                      ),
-                      onTap: () {},
-                    ),
-                    HomeTile(
-                      icon: Icons.workspace_premium_outlined,
-                      label: 'My Plaques',
-                      accent: kTierGold,
-                      badgeCount: stats.maybeWhen(
-                        data: (s) => s.totalPlaques,
-                        orElse: () => null,
-                      ),
-                      onTap: () {},
-                    ),
-                    HomeTile(
-                      icon: Icons.newspaper_outlined,
-                      label: 'News',
-                      accent: kTierSapphire,
-                      onTap: () {},
-                    ),
-                  ],
-                ),
+                LayoutBuilder(
+  builder: (context, constraints) {
+    // Choose column count from available width
+    final cols = constraints.maxWidth >= 720
+        ? 4
+        : constraints.maxWidth >= 480
+            ? 3
+            : 2;
+
+    // Aspect ratio shrinks as columns increase (tiles get narrower)
+    final aspect = cols == 4
+        ? 1.9
+        : cols == 3
+            ? 2.0
+            : 2.2;
+
+    return GridView.count(
+      crossAxisCount: cols,
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      crossAxisSpacing: 12,
+      mainAxisSpacing: 12,
+      childAspectRatio: aspect,
+      children: [
+        HomeTile(
+          icon: Icons.album_outlined,
+          label: 'Albums',
+          badgeCount: albums.maybeWhen(
+            data: (a) => a.length,
+            orElse: () => null,
+          ),
+          onTap: () {},
+        ),
+        HomeTile(
+          icon: Icons.podcasts,
+          label: 'Live Now',
+          accent: kStatusLive,
+          badgeCount: liveCount.maybeWhen(
+            data: (c) => c,
+            orElse: () => null,
+          ),
+          onTap: () {},
+        ),
+        HomeTile(
+          icon: Icons.workspace_premium_outlined,
+          label: 'My Plaques',
+          accent: kTierGold,
+          badgeCount: stats.maybeWhen(
+            data: (s) => s.totalPlaques,
+            orElse: () => null,
+          ),
+          onTap: () {},
+        ),
+        HomeTile(
+          icon: Icons.newspaper_outlined,
+          label: 'News',
+          accent: kTierSapphire,
+          onTap: () {},
+        ),
+      ],
+    );
+  },
+),
               ],
             ),
           ),

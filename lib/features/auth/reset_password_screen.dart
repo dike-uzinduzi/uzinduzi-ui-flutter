@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/errors.dart';
 import '../../core/routes.dart';
 import '../../core/theme.dart';
+import '../../widgets/auth_error_dialog.dart';
 import '../../widgets/otp_input.dart';
 import 'auth_controller.dart';
 
@@ -11,7 +12,8 @@ class ResetPasswordScreen extends ConsumerStatefulWidget {
   const ResetPasswordScreen({super.key});
 
   @override
-  ConsumerState<ResetPasswordScreen> createState() => _ResetPasswordScreenState();
+  ConsumerState<ResetPasswordScreen> createState() =>
+      _ResetPasswordScreenState();
 }
 
 class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
@@ -39,9 +41,13 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
 
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
+
     if (_otp.length != 6) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Enter the 6-digit code'), backgroundColor: kStatusFailed),
+      await AuthErrorDialog.show(
+        context,
+        title: 'Code required',
+        message: 'Enter the 6-digit code we sent to your email.',
+        retryLabel: 'OK',
       );
       return;
     }
@@ -56,18 +62,28 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
           );
 
       if (!mounted) return;
+
+      // Success — brief toast then navigate
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Password reset. Please log in.'),
           backgroundColor: kStatusLive,
         ),
       );
-      Navigator.of(context).pushNamedAndRemoveUntil(AppRoutes.login, (_) => false);
+
+      Navigator.of(context)
+          .pushNamedAndRemoveUntil(AppRoutes.login, (_) => false);
     } catch (e) {
       if (!mounted) return;
-      final message = e is AppError ? e.message : 'Reset failed';
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(message), backgroundColor: kStatusFailed),
+      final message = e is AppError
+          ? e.message
+          : 'We couldn\'t reset your password. Please try again.';
+
+      await AuthErrorDialog.show(
+        context,
+        title: 'Reset failed',
+        message: message,
+        retryLabel: 'Try again',
       );
     } finally {
       if (mounted) setState(() => _loading = false);
@@ -107,24 +123,35 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
                     const SizedBox(height: 8),
                     Text(
                       'Enter the code sent to\n$_email',
-                      style: const TextStyle(fontSize: 14, color: kUzinduziGrey),
+                      style: const TextStyle(
+                        fontSize: 14,
+                        color: kUzinduziGrey,
+                      ),
                     ),
                     const SizedBox(height: 24),
-                    OtpInput(onCompleted: (v) => setState(() => _otp = v)),
+                    OtpInput(
+                      onCompleted: (v) => setState(() => _otp = v),
+                    ),
                     const SizedBox(height: 24),
                     TextFormField(
                       controller: _passwordController,
                       obscureText: _obscure,
+                      enabled: !_loading,
                       decoration: InputDecoration(
                         labelText: 'New password',
                         prefixIcon: const Icon(Icons.lock_outline),
                         suffixIcon: IconButton(
-                          icon: Icon(_obscure ? Icons.visibility : Icons.visibility_off),
-                          onPressed: () => setState(() => _obscure = !_obscure),
+                          icon: Icon(_obscure
+                              ? Icons.visibility
+                              : Icons.visibility_off),
+                          onPressed: () =>
+                              setState(() => _obscure = !_obscure),
                         ),
                       ),
                       validator: (v) {
-                        if (v == null || v.isEmpty) return 'Password is required';
+                        if (v == null || v.isEmpty) {
+                          return 'Password is required';
+                        }
                         if (v.length < 8) return 'At least 8 characters';
                         return null;
                       },
@@ -140,7 +167,9 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
                                 width: 22,
                                 child: CircularProgressIndicator(
                                   strokeWidth: 2.5,
-                                  valueColor: AlwaysStoppedAnimation(Colors.white),
+                                  valueColor: AlwaysStoppedAnimation(
+                                    Colors.white,
+                                  ),
                                 ),
                               )
                             : const Text('Reset password'),
