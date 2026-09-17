@@ -15,7 +15,9 @@ COPY --chown=flutter:flutter . .
 # --pwa-strategy=none disables the Flutter service worker,
 # which otherwise caches main.dart.js and serves stale builds.
 RUN flutter build web --release --pwa-strategy=none
-
+# The flag leaves a 0-byte stub behind. Remove it entirely so
+# browsers and CDNs can't accidentally cache a stale service worker.
+RUN rm -f /app/build/web/flutter_service_worker.js
 # Stage 2: Serve with Nginx
 FROM nginx:alpine
 
