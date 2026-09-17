@@ -6,7 +6,12 @@ version: 1.0.0+1
 
 environment:
   sdk: ^3.13.1
-
+build_pipe:
+  clean_flutter: true
+  generate_log: true
+  platforms:
+    build_command: flutter build web
+    add_version_query_param: true
 dependencies:
   flutter:
     sdk: flutter
