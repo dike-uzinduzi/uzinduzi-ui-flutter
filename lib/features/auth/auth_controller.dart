@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/api_client.dart';
@@ -5,7 +7,10 @@ import '../../core/errors.dart';
 import 'auth_repository.dart';
 
 final authRepositoryProvider = Provider<AuthRepository>((ref) {
-  return AuthRepository(ref.watch(apiClientProvider), ref.watch(tokenStorageProvider));
+  return AuthRepository(
+    ref.watch(apiClientProvider),
+    ref.watch(tokenStorageProvider),
+  );
 });
 
 final authControllerProvider =
@@ -27,7 +32,10 @@ class AuthController extends AsyncNotifier<AuthUser?> {
     }
   }
 
-  Future<void> login({required String email, required String password}) async {
+  Future<void> login({
+    required String email,
+    required String password,
+  }) async {
     state = const AsyncValue.loading();
     try {
       final user = await _repo.login(email: email, password: password);
@@ -45,39 +53,53 @@ class AuthController extends AsyncNotifier<AuthUser?> {
     required String password,
     required String role,
   }) {
-    return _repo.register(userName: userName, email: email, password: password, role: role);
+    return _repo.register(
+      userName: userName,
+      email: email,
+      password: password,
+      role: role,
+    );
   }
 
   /// Verifies the OTP. On success, sets the session.
-  Future<void> verifyEmail({required String email, required String otp}) async {
+  Future<void> verifyEmail({
+    required String email,
+    required String otp,
+  }) async {
     final user = await _repo.verifyEmail(email: email, otp: otp);
     state = AsyncValue.data(user);
   }
 
-  Future<void> resendOtp({required String email}) => _repo.resendOtp(email: email);
+  Future<void> resendOtp({required String email}) =>
+      _repo.resendOtp(email: email);
 
-  Future<void> forgotPassword({required String email}) => _repo.forgotPassword(email: email);
+  Future<void> forgotPassword({required String email}) =>
+      _repo.forgotPassword(email: email);
 
   Future<void> resetPassword({
     required String email,
     required String otp,
     required String newPassword,
   }) =>
-      _repo.resetPassword(email: email, otp: otp, newPassword: newPassword);
+      _repo.resetPassword(
+        email: email,
+        otp: otp,
+        newPassword: newPassword,
+      );
 
-  /// Attempts a Google sign-in. Returns true if the user needs to
-  /// complete signup (choose username + role). Otherwise sets the
-  /// session and returns false.
-Future<String?> googleLogin() async {
-  final result = await _repo.googleLogin();
+  /// Attempts a Google sign-in. Returns a pending token if the user
+  /// must complete signup (choose username + role). Otherwise sets
+  /// the session and returns null.
+  Future<String?> googleLogin() async {
+    final result = await _repo.googleLogin();
 
-  if (result.needsCompletion) {
-    return result.token; // caller routes to /social-complete
+    if (result.needsCompletion) {
+      return result.token;
+    }
+
+    state = AsyncValue.data(result.user);
+    return null;
   }
-
-  state = AsyncValue.data(result.user);
-  return null;
-}
 
   Future<void> socialComplete({
     required String pendingToken,
@@ -95,5 +117,62 @@ Future<String?> googleLogin() async {
   Future<void> logout() async {
     await _repo.logout();
     state = const AsyncValue.data(null);
+  }
+
+  // ─── Profile ─────────────────────────────────────────────
+
+  Future<void> updateProfile({
+    String? firstName,
+    String? lastName,
+    String? contactEmail,
+    String? phoneNumber,
+    String? whatsappNumber,
+    String? nationalId,
+    DateTime? dateOfBirth,
+    String? gender,
+    String? countryOfResidence,
+    String? address,
+    String? bio,
+  }) async {
+    final current = state.valueOrNull;
+    if (current == null) return;
+
+    try {
+      final updated = await _repo.updateProfile(
+        firstName: firstName,
+        lastName: lastName,
+        contactEmail: contactEmail,
+        phoneNumber: phoneNumber,
+        whatsappNumber: whatsappNumber,
+        nationalId: nationalId,
+        dateOfBirth: dateOfBirth,
+        gender: gender,
+        countryOfResidence: countryOfResidence,
+        address: address,
+        bio: bio,
+      );
+      state = AsyncValue.data(updated);
+    } on AppError {
+      state = AsyncValue.data(current);
+      rethrow;
+    }
+  }
+
+  Future<void> uploadAvatar({
+    required Uint8List bytes,
+    required String fileName,
+  }) async {
+    final current = state.valueOrNull;
+    if (current == null) return;
+    try {
+      final updated = await _repo.uploadAvatar(
+        bytes: bytes,
+        fileName: fileName,
+      );
+      state = AsyncValue.data(updated);
+    } on AppError {
+      state = AsyncValue.data(current);
+      rethrow;
+    }
   }
 }

@@ -37,7 +37,8 @@ class HomeTab extends ConsumerWidget {
               child: IconButton(
                 icon: const Icon(Icons.notifications_none),
                 onPressed: () async {
-                  await Navigator.of(context).pushNamed(AppRoutes.notifications);
+                  await Navigator.of(context)
+                      .pushNamed(AppRoutes.notifications);
                   ref.invalidate(unreadNotificationsProvider);
                   ref.invalidate(notificationsFeedProvider);
                 },
@@ -55,12 +56,12 @@ class HomeTab extends ConsumerWidget {
         },
         child: Center(
           child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 1600),
+            constraints: const BoxConstraints(maxWidth: 1200),
             child: ListView(
               padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
               children: [
                 Text(
-                  'Welcome back, ${user?.userName ?? "there"} ',
+                  'Welcome back, ${user?.userName ?? "there"}',
                   style: const TextStyle(
                     fontSize: 22,
                     fontWeight: FontWeight.w800,
@@ -75,29 +76,30 @@ class HomeTab extends ConsumerWidget {
 
                 featured.when(
                   data: (album) {
-                    if (album == null) {
-                      return const _EmptyHero();
-                    }
+                    if (album == null) return const _EmptyHero();
                     return Column(
-  children: [
-    FeaturedAlbumHero(
-      album: album,
-      onSupport: () {
-        Navigator.of(context).push(
-          MaterialPageRoute(
-            builder: (_) => AlbumDetailScreen(albumId: album.id),
-          ),
-        );
-      },
-    ),
-    const SizedBox(height: 24),
-  ],
-);
+                      children: [
+                        FeaturedAlbumHero(
+                          album: album,
+                          onSupport: () {
+                            Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (_) => AlbumDetailScreen(
+                                  albumId: album.id,
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                        const SizedBox(height: 24),
+                      ],
+                    );
                   },
                   loading: () => const Padding(
                     padding: EdgeInsets.symmetric(vertical: 60),
                     child: Center(
-                      child: CircularProgressIndicator(color: kUzinduziRed),
+                      child:
+                          CircularProgressIndicator(color: kUzinduziRed),
                     ),
                   ),
                   error: (_, _) => const _EmptyHero(),
@@ -112,69 +114,71 @@ class HomeTab extends ConsumerWidget {
                   ),
                 ),
                 const SizedBox(height: 12),
+
                 LayoutBuilder(
-  builder: (context, constraints) {
-    // Choose column count from available width
-    final cols = constraints.maxWidth >= 720
-        ? 4
-        : constraints.maxWidth >= 480
-            ? 3
-            : 2;
+                  builder: (context, constraints) {
+                    final isWide = constraints.maxWidth >= 700;
+                    final tileWidth = isWide
+                        ? 220.0
+                        : (constraints.maxWidth - 12) / 2;
 
-    // Aspect ratio shrinks as columns increase (tiles get narrower)
-    final aspect = cols == 4
-        ? 1.9
-        : cols == 3
-            ? 2.0
-            : 2.2;
+                    Widget tile({required Widget child}) => SizedBox(
+                          width: tileWidth,
+                          height: 110,
+                          child: child,
+                        );
 
-    return GridView.count(
-      crossAxisCount: cols,
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      crossAxisSpacing: 12,
-      mainAxisSpacing: 12,
-      childAspectRatio: aspect,
-      children: [
-        HomeTile(
-          icon: Icons.album_outlined,
-          label: 'Albums',
-          badgeCount: albums.maybeWhen(
-            data: (a) => a.length,
-            orElse: () => null,
-          ),
-          onTap: () {},
-        ),
-        HomeTile(
-          icon: Icons.podcasts,
-          label: 'Live Now',
-          accent: kStatusLive,
-          badgeCount: liveCount.maybeWhen(
-            data: (c) => c,
-            orElse: () => null,
-          ),
-          onTap: () {},
-        ),
-        HomeTile(
-          icon: Icons.workspace_premium_outlined,
-          label: 'My Plaques',
-          accent: kTierGold,
-          badgeCount: stats.maybeWhen(
-            data: (s) => s.totalPlaques,
-            orElse: () => null,
-          ),
-          onTap: () {},
-        ),
-        HomeTile(
-          icon: Icons.newspaper_outlined,
-          label: 'News',
-          accent: kTierSapphire,
-          onTap: () {},
-        ),
-      ],
-    );
-  },
-),
+                    return Wrap(
+                      spacing: 12,
+                      runSpacing: 12,
+                      children: [
+                        tile(
+                          child: HomeTile(
+                            icon: Icons.album_outlined,
+                            label: 'Albums',
+                            badgeCount: albums.maybeWhen(
+                              data: (a) => a.length,
+                              orElse: () => null,
+                            ),
+                            onTap: () {},
+                          ),
+                        ),
+                        tile(
+                          child: HomeTile(
+                            icon: Icons.podcasts,
+                            label: 'Live Now',
+                            accent: kStatusLive,
+                            badgeCount: liveCount.maybeWhen(
+                              data: (c) => c,
+                              orElse: () => null,
+                            ),
+                            onTap: () {},
+                          ),
+                        ),
+                        tile(
+                          child: HomeTile(
+                            icon: Icons.workspace_premium_outlined,
+                            label: 'My Plaques',
+                            accent: kTierGold,
+                            badgeCount: stats.maybeWhen(
+                              data: (s) => s.totalPlaques,
+                              orElse: () => null,
+                            ),
+                            onTap: () {},
+                          ),
+                        ),
+                        tile(
+                          child: HomeTile(
+                            icon: Icons.newspaper_outlined,
+                            label: 'News',
+                            accent: kTierSapphire,
+                            onTap: () {},
+                          ),
+                        ),
+                      ],
+                    );
+                  },
+                ),
               ],
             ),
           ),
@@ -204,7 +208,10 @@ class _EmptyHero extends StatelessWidget {
             SizedBox(height: 8),
             Text(
               'Nothing live right now',
-              style: TextStyle(fontWeight: FontWeight.w700, color: kUzinduziBlack),
+              style: TextStyle(
+                fontWeight: FontWeight.w700,
+                color: kUzinduziBlack,
+              ),
             ),
             SizedBox(height: 4),
             Text(
