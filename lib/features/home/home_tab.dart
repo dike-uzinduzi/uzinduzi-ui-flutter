@@ -63,7 +63,7 @@ class HomeTab extends ConsumerWidget {
               padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
               children: [
                 Text(
-                  'Welcome back, ${user?.userName ?? "there"}',
+                  'Welcome,  ${user?.userName ?? "there"}',
                   style: const TextStyle(
                     fontSize: 22,
                     fontWeight: FontWeight.w800,
