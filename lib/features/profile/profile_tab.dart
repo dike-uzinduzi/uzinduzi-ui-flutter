@@ -8,12 +8,36 @@ import '../home/home_providers.dart';
 import 'edit_profile_screen.dart';
 
 class ProfileTab extends ConsumerWidget {
-  const ProfileTab({super.key});
+  /// When true, renders its own Scaffold + AppBar.
+  /// When false (used inside `_ProfileRoute`), the outer route provides
+  /// the AppBar with a back button.
+  final bool showAppBar;
+
+  const ProfileTab({super.key, this.showAppBar = true});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final user = ref.watch(authControllerProvider).valueOrNull;
     final stats = ref.watch(fanStatsProvider);
+
+    final content = LayoutBuilder(
+      builder: (context, constraints) {
+        final wide = constraints.maxWidth >= 1000;
+
+        if (!wide) {
+          return _NarrowProfile(user: user, stats: stats, ref: ref);
+        }
+
+        return _WideProfile(user: user, stats: stats, ref: ref);
+      },
+    );
+
+    if (!showAppBar) {
+      return Container(
+        color: kUzinduziWhite,
+        child: content,
+      );
+    }
 
     return Scaffold(
       backgroundColor: kUzinduziWhite,
@@ -23,17 +47,7 @@ class ProfileTab extends ConsumerWidget {
           style: TextStyle(fontWeight: FontWeight.w800),
         ),
       ),
-      body: LayoutBuilder(
-        builder: (context, constraints) {
-          final wide = constraints.maxWidth >= 1000;
-
-          if (!wide) {
-            return _NarrowProfile(user: user, stats: stats, ref: ref);
-          }
-
-          return _WideProfile(user: user, stats: stats, ref: ref);
-        },
-      ),
+      body: content,
     );
   }
 }
@@ -69,7 +83,7 @@ class _WideProfile extends StatelessWidget {
                 const SizedBox(height: 20),
                 Center(
                   child: Text(
-                    user?.userName ?? '',
+                    user?.displayName ?? user?.userName ?? '',
                     textAlign: TextAlign.center,
                     style: const TextStyle(
                       fontSize: 22,
@@ -309,7 +323,7 @@ class _NarrowProfile extends StatelessWidget {
         const SizedBox(height: 16),
         Center(
           child: Text(
-            user?.userName ?? '',
+            user?.displayName ?? user?.userName ?? '',
             style: const TextStyle(
               fontSize: 22,
               fontWeight: FontWeight.w800,

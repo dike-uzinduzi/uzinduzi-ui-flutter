@@ -104,6 +104,36 @@ class AuthUser {
     return userName;
   }
 
+  // ── Profile completion ──────────────────────────────────
+
+  /// Fields the user can set from Edit Profile that count toward
+  /// "profile complete". Adjust this list to match your policy.
+  List<bool> get _completionChecks => [
+        (firstName ?? '').trim().isNotEmpty,
+        (lastName ?? '').trim().isNotEmpty,
+        hasCustomProfilePic,
+        (contactEmail ?? '').trim().isNotEmpty,
+        (phoneNumber ?? '').trim().isNotEmpty,
+        (countryOfResidence ?? '').trim().isNotEmpty,
+        (bio ?? '').trim().isNotEmpty,
+        dateOfBirth != null,
+        gender != null,
+      ];
+
+  /// 0.0 → empty, 1.0 → complete.
+  double get profileCompletion {
+    final checks = _completionChecks;
+    if (checks.isEmpty) return 1.0;
+    return checks.where((c) => c).length / checks.length;
+  }
+
+  /// True when at least one required field is missing.
+  bool get needsProfileCompletion => missingProfileFields > 0;
+
+  /// How many required fields are still empty.
+  int get missingProfileFields =>
+      _completionChecks.where((c) => !c).length;
+
   Map<String, dynamic> toJson() => {
         'id': id,
         'userName': userName,

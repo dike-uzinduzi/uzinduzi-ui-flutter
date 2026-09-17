@@ -10,5 +10,7 @@ class AppRoutes {
   static const String resetPassword   = '/reset-password';
   static const String socialComplete  = '/social-complete';
   static const String home            = '/home';
-  static const String notifications = '/notifications';
+  static const String notifications   = '/notifications';
+  static const String profile         = '/profile';
+  static const String editProfile     = '/profile/edit';
 }

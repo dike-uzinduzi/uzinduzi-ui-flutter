@@ -12,6 +12,7 @@ import 'features/auth/social_complete_screen.dart';
 import 'features/auth/verify_otp_screen.dart';
 import 'features/home/home_shell.dart';
 import 'features/notifications/notifications_screen.dart';
+import 'features/profile/profile_tab.dart';
 
 class UzinduziApp extends ConsumerWidget {
   const UzinduziApp({super.key});
@@ -32,6 +33,7 @@ class UzinduziApp extends ConsumerWidget {
         AppRoutes.socialComplete: (_) => const SocialCompleteScreen(),
         AppRoutes.home:           (_) => const HomeShell(),
         AppRoutes.notifications:  (_) => const NotificationsScreen(),
+        AppRoutes.profile:        (_) => const _ProfileRoute(),
       },
     );
   }
@@ -61,5 +63,32 @@ class _AuthGate extends ConsumerWidget {
     }
 
     return const HomeShell();
+  }
+}
+
+/// Full-screen profile route with a back button.
+///
+/// `ProfileTab` normally renders inside `HomeShell` (no back button needed).
+/// When pushed as its own route, this wrapper supplies the AppBar and back
+/// navigation so the user isn't stranded.
+class _ProfileRoute extends StatelessWidget {
+  const _ProfileRoute();
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: kUzinduziWhite,
+      appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => Navigator.of(context).maybePop(),
+        ),
+        title: const Text(
+          'Profile',
+          style: TextStyle(fontWeight: FontWeight.w800),
+        ),
+      ),
+      body: const ProfileTab(showAppBar: false),
+    );
   }
 }

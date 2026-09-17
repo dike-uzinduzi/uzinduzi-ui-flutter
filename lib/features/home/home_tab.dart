@@ -1,16 +1,18 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../albums/album_detail_screen.dart';
+
 import '../../core/routes.dart';
 import '../../core/theme.dart';
-import '../../widgets/badge_dot.dart';
-import './widgets/home_tile.dart';
 import '../../widgets/uzinduzi_logo.dart';
-import '../auth/auth_controller.dart';
+import '../albums/album_detail_screen.dart';
 import '../albums/albums_provider.dart';
+import '../auth/auth_controller.dart';
 import '../notifications/notifications_provider.dart';
+import '../profile/edit_profile_screen.dart';
 import 'home_providers.dart';
 import 'widgets/featured_album_hero.dart';
+import 'widgets/home_tile.dart';
 import 'widgets/stat_row.dart';
 
 class HomeTab extends ConsumerWidget {
@@ -30,20 +32,20 @@ class HomeTab extends ConsumerWidget {
       appBar: AppBar(
         title: const UzinduziLogo(variant: LogoVariant.wordmark, height: 28),
         actions: [
-          Padding(
-            padding: const EdgeInsets.only(right: 8),
-            child: BadgeDot(
-              count: unread.valueOrNull ?? 0,
-              child: IconButton(
-                icon: const Icon(Icons.notifications_none),
-                onPressed: () async {
-                  await Navigator.of(context)
-                      .pushNamed(AppRoutes.notifications);
-                  ref.invalidate(unreadNotificationsProvider);
-                  ref.invalidate(notificationsFeedProvider);
-                },
-              ),
-            ),
+          _AvatarAction(
+            avatarUrl: user?.avatarUrl,
+            unreadCount: unread.valueOrNull ?? 0,
+            missingProfileFields: user?.missingProfileFields ?? 0,
+            displayName: user?.displayName ?? user?.userName ?? '',
+            email: user?.email ?? '',
+            onSignOut: () async {
+              await ref.read(authControllerProvider.notifier).logout();
+              // _AuthGate reacts to the state change and swaps to LoginScreen.
+            },
+            onNotificationsOpened: () {
+              ref.invalidate(unreadNotificationsProvider);
+              ref.invalidate(notificationsFeedProvider);
+            },
           ),
         ],
       ),
@@ -182,6 +184,398 @@ class HomeTab extends ConsumerWidget {
               ],
             ),
           ),
+        ),
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────
+// AppBar avatar with dropdown menu
+// ─────────────────────────────────────────────────────────────
+class _AvatarAction extends StatelessWidget {
+  const _AvatarAction({
+    required this.avatarUrl,
+    required this.unreadCount,
+    required this.missingProfileFields,
+    required this.displayName,
+    required this.email,
+    required this.onSignOut,
+    this.onNotificationsOpened,
+  });
+
+  final String? avatarUrl;
+  final int unreadCount;
+  final int missingProfileFields;
+  final String displayName;
+  final String email;
+  final Future<void> Function() onSignOut;
+  final VoidCallback? onNotificationsOpened;
+
+  @override
+  Widget build(BuildContext context) {
+    final hasImage = avatarUrl != null && avatarUrl!.isNotEmpty;
+    final showNotifications = unreadCount > 0;
+    final showProfileNudge = missingProfileFields > 0;
+
+    final avatar = Container(
+      width: 36,
+      height: 36,
+      decoration: BoxDecoration(
+        color: kUzinduziRed.withValues(alpha: 0.1),
+        shape: BoxShape.circle,
+        border: Border.all(color: kUzinduziDivider, width: 1),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: hasImage
+          ? CachedNetworkImage(
+              imageUrl: avatarUrl!,
+              fit: BoxFit.cover,
+              width: 36,
+              height: 36,
+              placeholder: (_, _) => const Center(
+                child: SizedBox(
+                  width: 14,
+                  height: 14,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: kUzinduziRed,
+                  ),
+                ),
+              ),
+              errorWidget: (_, _, _) => const Icon(
+                Icons.person,
+                size: 20,
+                color: kUzinduziRed,
+              ),
+            )
+          : const Icon(
+              Icons.person,
+              size: 20,
+              color: kUzinduziRed,
+            ),
+    );
+
+    return Padding(
+      padding: const EdgeInsets.only(right: 12),
+      child: PopupMenuButton<_AvatarMenuAction>(
+        tooltip: 'Account',
+        offset: const Offset(0, 48),
+        position: PopupMenuPosition.under,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(14),
+        ),
+        color: Colors.white,
+        elevation: 8,
+        onSelected: (action) => _onMenuSelected(context, action),
+        itemBuilder: (context) => [
+          // ── Header ─────────────────────────────
+          PopupMenuItem<_AvatarMenuAction>(
+            enabled: false,
+            height: 64,
+            child: SizedBox(
+              width: 220,
+              child: Row(
+                children: [
+                  SizedBox(width: 40, height: 40, child: avatar),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          displayName,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w800,
+                            color: kUzinduziBlack,
+                          ),
+                        ),
+                        Text(
+                          email,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontSize: 11,
+                            color: kUzinduziGrey,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const PopupMenuDivider(),
+
+          // ── Notifications ──────────────────────
+          PopupMenuItem<_AvatarMenuAction>(
+            value: _AvatarMenuAction.notifications,
+            child: _MenuRow(
+              icon: Icons.notifications_none,
+              label: 'Notifications',
+              badge: showNotifications
+                  ? _MiniBadge(
+                      label: unreadCount > 99 ? '99+' : '$unreadCount',
+                      color: kUzinduziRed,
+                    )
+                  : null,
+            ),
+          ),
+
+          // ── Edit profile ───────────────────────
+          PopupMenuItem<_AvatarMenuAction>(
+            value: _AvatarMenuAction.editProfile,
+            child: _MenuRow(
+              icon: Icons.edit_outlined,
+              label: 'Edit profile',
+              badge: showProfileNudge
+                  ? const _MiniBadge(
+                      label: '!',
+                      color: kStatusScheduled,
+                    )
+                  : null,
+            ),
+          ),
+
+          // ── Wallet ─────────────────────────────
+          const PopupMenuItem<_AvatarMenuAction>(
+            value: _AvatarMenuAction.wallet,
+            child: _MenuRow(
+              icon: Icons.account_balance_wallet_outlined,
+              label: 'Wallet',
+              trailing: 'Soon',
+            ),
+          ),
+
+          // ── My plaques ─────────────────────────
+          const PopupMenuItem<_AvatarMenuAction>(
+            value: _AvatarMenuAction.plaques,
+            child: _MenuRow(
+              icon: Icons.emoji_events_outlined,
+              label: 'My plaques',
+            ),
+          ),
+
+          // ── Support history ────────────────────
+          const PopupMenuItem<_AvatarMenuAction>(
+            value: _AvatarMenuAction.supportHistory,
+            child: _MenuRow(
+              icon: Icons.receipt_long_outlined,
+              label: 'Support history',
+            ),
+          ),
+
+          // ── Settings ───────────────────────────
+          const PopupMenuItem<_AvatarMenuAction>(
+            value: _AvatarMenuAction.settings,
+            child: _MenuRow(
+              icon: Icons.settings_outlined,
+              label: 'Settings',
+            ),
+          ),
+
+          const PopupMenuDivider(),
+
+          // ── Sign out ───────────────────────────
+          const PopupMenuItem<_AvatarMenuAction>(
+            value: _AvatarMenuAction.signOut,
+            child: _MenuRow(
+              icon: Icons.logout,
+              label: 'Sign out',
+              danger: true,
+            ),
+          ),
+        ],
+        child: Padding(
+          padding: const EdgeInsets.all(4),
+          child: Stack(
+            clipBehavior: Clip.none,
+            children: [
+              avatar,
+              if (showNotifications)
+                Positioned(
+                  top: -4,
+                  right: -4,
+                  child: _MiniBadge(
+                    label: unreadCount > 99 ? '99+' : '$unreadCount',
+                    color: kUzinduziRed,
+                  ),
+                ),
+              if (!showNotifications && showProfileNudge)
+                const Positioned(
+                  top: -4,
+                  right: -4,
+                  child: _MiniBadge(
+                    label: '!',
+                    color: kStatusScheduled,
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _onMenuSelected(
+    BuildContext context,
+    _AvatarMenuAction action,
+  ) async {
+    switch (action) {
+      case _AvatarMenuAction.notifications:
+        await Navigator.of(context).pushNamed(AppRoutes.notifications);
+        onNotificationsOpened?.call();
+        break;
+
+      case _AvatarMenuAction.editProfile:
+        await Navigator.of(context).push(
+          MaterialPageRoute(builder: (_) => const EditProfileScreen()),
+        );
+        break;
+
+      case _AvatarMenuAction.wallet:
+        _snack(context, 'Wallet coming soon');
+        break;
+
+      case _AvatarMenuAction.plaques:
+        _snack(context, 'Plaques coming soon');
+        break;
+
+      case _AvatarMenuAction.supportHistory:
+        _snack(context, 'Support history coming soon');
+        break;
+
+      case _AvatarMenuAction.settings:
+        _snack(context, 'Settings coming soon');
+        break;
+
+      case _AvatarMenuAction.signOut:
+        await _confirmSignOut(context);
+        break;
+    }
+  }
+
+  void _snack(BuildContext context, String msg) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(msg)),
+    );
+  }
+
+  Future<void> _confirmSignOut(BuildContext context) async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Sign out?'),
+        content: const Text('You will need to sign in again.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: const Text(
+              'Sign out',
+              style: TextStyle(
+                color: kUzinduziRed,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (ok == true) {
+      await onSignOut();
+    }
+  }
+}
+
+enum _AvatarMenuAction {
+  notifications,
+  editProfile,
+  wallet,
+  plaques,
+  supportHistory,
+  settings,
+  signOut,
+}
+
+class _MenuRow extends StatelessWidget {
+  const _MenuRow({
+    required this.icon,
+    required this.label,
+    this.badge,
+    this.trailing,
+    this.danger = false,
+  });
+
+  final IconData icon;
+  final String label;
+  final Widget? badge;
+  final String? trailing;
+  final bool danger;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = danger ? kUzinduziRed : kUzinduziBlack;
+    return Row(
+      children: [
+        Icon(icon, size: 18, color: color),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Text(
+            label,
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: color,
+            ),
+          ),
+        ),
+        if (badge != null) badge!,
+        if (trailing != null)
+          Text(
+            trailing!,
+            style: const TextStyle(
+              fontSize: 10,
+              fontWeight: FontWeight.w700,
+              color: kUzinduziGrey,
+              letterSpacing: 0.8,
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+class _MiniBadge extends StatelessWidget {
+  const _MiniBadge({required this.label, required this.color});
+  final String label;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      constraints: const BoxConstraints(minWidth: 18, minHeight: 18),
+      padding: const EdgeInsets.symmetric(horizontal: 5),
+      decoration: BoxDecoration(
+        color: color,
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: kUzinduziWhite, width: 1.5),
+      ),
+      alignment: Alignment.center,
+      child: Text(
+        label,
+        style: const TextStyle(
+          color: Colors.white,
+          fontSize: 10,
+          fontWeight: FontWeight.w800,
+          height: 1,
         ),
       ),
     );
