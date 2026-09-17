@@ -23,7 +23,8 @@ class AppConfig {
 
   static const Duration connectTimeout = Duration(seconds: 15);
   static const Duration receiveTimeout = Duration(seconds: 20);
-
+static const String defaultTrackArt =
+    '$cdnBase/placeholders/track-art-default.png';
   static const String defaultAvatar     = '$cdnBase/placeholders/avatar-default.png';
   static const String defaultCover      = '$cdnBase/placeholders/cover-default.jpg';
   static const String defaultAlbumCover = '$cdnBase/placeholders/album-cover-default.png';

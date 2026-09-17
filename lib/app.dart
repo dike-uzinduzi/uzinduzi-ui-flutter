@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'core/routes.dart';
 import 'core/theme.dart';
+import 'features/admin/admin_shell.dart';
 import 'features/auth/auth_controller.dart';
 import 'features/auth/forgot_password_screen.dart';
 import 'features/auth/login_screen.dart';
@@ -20,7 +21,7 @@ class UzinduziApp extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return MaterialApp(
-      title: 'Uzinduzi',
+      title: 'UzinduziAfrica',
       debugShowCheckedModeBanner: false,
       theme: uzinduziTheme(),
       initialRoute: AppRoutes.login,
@@ -34,6 +35,7 @@ class UzinduziApp extends ConsumerWidget {
         AppRoutes.home:           (_) => const HomeShell(),
         AppRoutes.notifications:  (_) => const NotificationsScreen(),
         AppRoutes.profile:        (_) => const _ProfileRoute(),
+        AppRoutes.admin:          (_) => const AdminShell(),
       },
     );
   }

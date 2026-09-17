@@ -38,9 +38,9 @@ class HomeTab extends ConsumerWidget {
             missingProfileFields: user?.missingProfileFields ?? 0,
             displayName: user?.displayName ?? user?.userName ?? '',
             email: user?.email ?? '',
+            isAdmin: user?.role == 'admin' || user?.role == 'super_admin',
             onSignOut: () async {
               await ref.read(authControllerProvider.notifier).logout();
-              // _AuthGate reacts to the state change and swaps to LoginScreen.
             },
             onNotificationsOpened: () {
               ref.invalidate(unreadNotificationsProvider);
@@ -201,6 +201,7 @@ class _AvatarAction extends StatelessWidget {
     required this.displayName,
     required this.email,
     required this.onSignOut,
+    this.isAdmin = false,
     this.onNotificationsOpened,
   });
 
@@ -209,6 +210,7 @@ class _AvatarAction extends StatelessWidget {
   final int missingProfileFields;
   final String displayName;
   final String email;
+  final bool isAdmin;
   final Future<void> Function() onSignOut;
   final VoidCallback? onNotificationsOpened;
 
@@ -377,6 +379,18 @@ class _AvatarAction extends StatelessWidget {
             ),
           ),
 
+          // ── Admin (only for admins) ────────────
+          if (isAdmin) ...[
+            const PopupMenuDivider(),
+            const PopupMenuItem<_AvatarMenuAction>(
+              value: _AvatarMenuAction.admin,
+              child: _MenuRow(
+                icon: Icons.dashboard_outlined,
+                label: 'Admin dashboard',
+              ),
+            ),
+          ],
+
           const PopupMenuDivider(),
 
           // ── Sign out ───────────────────────────
@@ -452,6 +466,10 @@ class _AvatarAction extends StatelessWidget {
         _snack(context, 'Settings coming soon');
         break;
 
+      case _AvatarMenuAction.admin:
+        await Navigator.of(context).pushNamed(AppRoutes.admin);
+        break;
+
       case _AvatarMenuAction.signOut:
         await _confirmSignOut(context);
         break;
@@ -502,6 +520,7 @@ enum _AvatarMenuAction {
   plaques,
   supportHistory,
   settings,
+  admin,
   signOut,
 }
 
@@ -537,7 +556,7 @@ class _MenuRow extends StatelessWidget {
             ),
           ),
         ),
-        if (badge != null) badge!,
+        
         if (trailing != null)
           Text(
             trailing!,

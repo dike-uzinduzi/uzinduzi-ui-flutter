@@ -97,7 +97,7 @@ class AuthUser {
   /// Best-effort display name with sensible fallbacks.
   String get displayName {
     final parts = [firstName, lastName]
-        .where((s) => s != null && s!.trim().isNotEmpty)
+        .where((s) => s != null && s.trim().isNotEmpty)
         .map((s) => s!.trim())
         .toList();
     if (parts.isNotEmpty) return parts.join(' ');
