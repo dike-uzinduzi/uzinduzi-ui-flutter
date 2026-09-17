@@ -21,7 +21,7 @@ class UzinduziApp extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return MaterialApp(
-      title: 'UzinduziAfrica',
+      title: 'Uzinduzi Africa',
       debugShowCheckedModeBanner: false,
       theme: uzinduziTheme(),
       initialRoute: AppRoutes.login,

@@ -12,12 +12,12 @@ void main() async {
   if (kIsWeb) {
     await Firebase.initializeApp(
       options: const FirebaseOptions(
-        apiKey: 'AIzaSyAj5GyEzyVNS2yLxj1Stac-BTOJNDtijJI',
-        authDomain: 'zinduziafrica.firebaseapp.com',
-        projectId: 'zinduziafrica',
-        storageBucket: 'zinduziafrica.firebasestorage.app',
-        messagingSenderId: '43388235704',
-        appId: '1:43388235704:web:f67ef640b93fba88eea94d',
+        apiKey: 'AIzaSyD7k36zjHRBEEoZwQj9JXRpihI4n4SvNbo',
+        authDomain: 'uzinduziafrica-2223c.firebaseapp.com',
+        projectId:'app.uzinduziafrica.com', //'uzinduziafrica-2223c',
+        storageBucket: 'uzinduziafrica-2223c.firebasestorage.app',
+        messagingSenderId: '636866540205',
+        appId: '1:636866540205:web:a401812347e495e25f8c24',
       ),
     );
   }
