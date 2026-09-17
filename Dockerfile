@@ -3,20 +3,18 @@ FROM gmeligio/flutter-web:3.47.4 AS builder
 
 WORKDIR /app
 
-# Copy pubspec files first for dependency caching
-COPY pubspec.* ./
-
-# Switch to root to fix ownership, then back to flutter
-USER root
-RUN chown -R flutter:flutter /app
-USER flutter
+# Copy pubspec files first for dependency caching.
+# --chown avoids the need for a separate `chown` step.
+COPY --chown=flutter:flutter pubspec.* ./
 RUN flutter pub get
 
-# Copy the rest of the source code
-COPY . .
+# Copy the rest of the source with the same ownership
+COPY --chown=flutter:flutter . .
 
-# Build the web app in release mode
-RUN flutter build web --release
+# Build the web app in release mode.
+# --pwa-strategy=none disables the Flutter service worker,
+# which otherwise caches main.dart.js and serves stale builds.
+RUN flutter build web --release --pwa-strategy=none
 
 # Stage 2: Serve with Nginx
 FROM nginx:alpine
@@ -27,7 +25,7 @@ RUN rm -rf /usr/share/nginx/html/*
 # Copy built web assets from builder
 COPY --from=builder /app/build/web /usr/share/nginx/html
 
-# Copy custom Nginx config for SPA routing
+# Copy custom Nginx config for SPA routing + Firebase auth proxy
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 
 EXPOSE 80
