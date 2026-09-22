@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/config.dart';
 import '../../core/errors.dart';
 import '../../core/routes.dart';
 import '../../core/theme.dart';
@@ -30,41 +32,37 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     _passwordController.dispose();
     super.dispose();
   }
-Future<void> _submit() async {
 
-  if (!_formKey.currentState!.validate()) {
-    return;
+  Future<void> _submit() async {
+    if (!_formKey.currentState!.validate()) return;
+
+    setState(() => _loading = true);
+
+    try {
+      await ref.read(authControllerProvider.notifier).login(
+            email: _emailController.text.trim(),
+            password: _passwordController.text,
+          );
+    } catch (e) {
+      if (!mounted) return;
+
+      final message = e is AppError
+          ? e.message
+          : 'We couldn\'t sign you in. Check your details and try again.';
+
+      _passwordController.clear();
+
+      await AuthErrorDialog.show(
+        context,
+        title: 'Sign-in failed',
+        message: message,
+        retryLabel: 'Try again',
+      );
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
   }
 
-  setState(() => _loading = true);
-
-  try {
-    await ref.read(authControllerProvider.notifier).login(
-          email: _emailController.text.trim(),
-          password: _passwordController.text,
-        );
-  } catch (e ) {
-  
-
-    if (!mounted) return;
-
-    final message = e is AppError
-        ? e.message
-        : 'We couldn\'t sign you in. Check your details and try again.';
-
-    _passwordController.clear();
-
-    await AuthErrorDialog.show(
-      context,
-      title: 'Sign-in failed',
-      message: message,
-      retryLabel: 'Try again',
-    );
-
-  } finally {
-    if (mounted) setState(() => _loading = false);
-  }
-}
   Future<void> _googleSignIn() async {
     setState(() => _googleLoading = true);
 
@@ -95,165 +93,244 @@ Future<void> _submit() async {
     }
   }
 
-@override
-Widget build(BuildContext context) {
-  return Scaffold(
-    backgroundColor: kUzinduziWhite,
-    
-    body: SafeArea(
-      child: Center(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 420),
-            child: Form(
-              key: _formKey,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  const Center(
-                    child: UzinduziLogo(
-                      variant: LogoVariant.launchSymbol,
-                      height: 52,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  const Text(
-                    'Launch Big, Grow Bigger',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(fontSize: 14, color: kUzinduziGrey),
-                  ),
-                  const SizedBox(height: 40),
-                  const Text(
-                    'Welcome back',
-                    style: TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.w800,
-                      color: kUzinduziBlack,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  const Text(
-                    'Login to continue',
-                    style: TextStyle(fontSize: 14, color: kUzinduziGrey),
-                  ),
-                  const SizedBox(height: 24),
-                  TextFormField(
-                    controller: _emailController,
-                    keyboardType: TextInputType.emailAddress,
-                    enabled: !_loading && !_googleLoading,
-                    textInputAction: TextInputAction.next,
-                    decoration: const InputDecoration(
-                      labelText: 'Email',
-                      prefixIcon: Icon(Icons.email_outlined),
-                    ),
-                    validator: (v) =>
-                        (v == null || v.isEmpty) ? 'Email is required' : null,
-                  ),
-                  const SizedBox(height: 16),
-                  TextFormField(
-                    controller: _passwordController,
-                    obscureText: _obscure,
-                    enabled: !_loading && !_googleLoading,
-                    textInputAction: TextInputAction.done,
-                    onFieldSubmitted: (_) => _submit(),
-                    decoration: InputDecoration(
-                      labelText: 'Password',
-                      prefixIcon: const Icon(Icons.lock_outline),
-                      suffixIcon: IconButton(
-                        icon: Icon(
-                          _obscure ? Icons.visibility : Icons.visibility_off,
-                        ),
-                        onPressed: () => setState(() => _obscure = !_obscure),
-                      ),
-                    ),
-                    validator: (v) =>
-                        (v == null || v.isEmpty) ? 'Password is required' : null,
-                  ),
-                  Align(
-                    alignment: Alignment.centerRight,
-                    child: TextButton(
-                      onPressed: _loading || _googleLoading
-                          ? null
-                          : () => Navigator.of(context)
-                              .pushNamed(AppRoutes.forgotPassword),
-                      child: const Text(
-                        'Forgot password?',
-                        style: TextStyle(
-                          color: kUzinduziRed,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  SizedBox(
-                    height: 50,
-                    child: ElevatedButton(
-                      onPressed: _loading || _googleLoading ? null : _submit,
-                      child: _loading
-                          ? const SizedBox(
-                              height: 22,
-                              width: 22,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2.5,
-                                valueColor:
-                                    AlwaysStoppedAnimation(Colors.white),
-                              ),
-                            )
-                          : const Text('Login'),
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-                  const Row(children: [
-                    Expanded(child: Divider(color: kUzinduziDivider)),
-                    Padding(
-                      padding: EdgeInsets.symmetric(horizontal: 12),
-                      child: Text(
-                        'or',
-                        style: TextStyle(
-                          color: kUzinduziGrey,
-                          fontSize: 12,
-                        ),
-                      ),
-                    ),
-                    Expanded(child: Divider(color: kUzinduziDivider)),
-                  ]),
-                  const SizedBox(height: 20),
-                  GoogleSignInButton(
-                    onPressed: _googleSignIn,
-                    loading: _googleLoading,
-                  ),
-                  const SizedBox(height: 24),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Text(
-                        'New here? ',
-                        style: TextStyle(color: kUzinduziGrey),
-                      ),
-                      TextButton(
-                        onPressed: _loading || _googleLoading
-                            ? null
-                            : () => Navigator.of(context)
-                                .pushNamed(AppRoutes.register),
-                        child: const Text(
-                          'Create an account',
-                          style: TextStyle(
-                            color: kUzinduziRed,
-                            fontWeight: FontWeight.w700,
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: kUzinduziWhite,
+      body: SafeArea(
+        child: Column(
+          children: [
+            // ── Scrollable form ─────────────────────
+            Expanded(
+              child: Center(
+                child: SingleChildScrollView(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 420),
+                    child: Form(
+                      key: _formKey,
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          const Center(
+                            child: UzinduziLogo(
+                              variant: LogoVariant.launchSymbol,
+                              height: 52,
+                            ),
                           ),
-                        ),
+                          const SizedBox(height: 12),
+                          const Text(
+                            'Launch Big, Grow Bigger',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: kUzinduziGrey,
+                            ),
+                          ),
+                          const SizedBox(height: 40),
+                          const Text(
+                            'Welcome back',
+                            style: TextStyle(
+                              fontSize: 24,
+                              fontWeight: FontWeight.w800,
+                              color: kUzinduziBlack,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          const Text(
+                            'Login to continue',
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: kUzinduziGrey,
+                            ),
+                          ),
+                          const SizedBox(height: 24),
+                          TextFormField(
+                            controller: _emailController,
+                            keyboardType: TextInputType.emailAddress,
+                            enabled: !_loading && !_googleLoading,
+                            textInputAction: TextInputAction.next,
+                            decoration: const InputDecoration(
+                              labelText: 'Email',
+                              prefixIcon: Icon(Icons.email_outlined),
+                            ),
+                            validator: (v) => (v == null || v.isEmpty)
+                                ? 'Email is required'
+                                : null,
+                          ),
+                          const SizedBox(height: 16),
+                          TextFormField(
+                            controller: _passwordController,
+                            obscureText: _obscure,
+                            enabled: !_loading && !_googleLoading,
+                            textInputAction: TextInputAction.done,
+                            onFieldSubmitted: (_) => _submit(),
+                            decoration: InputDecoration(
+                              labelText: 'Password',
+                              prefixIcon: const Icon(Icons.lock_outline),
+                              suffixIcon: IconButton(
+                                icon: Icon(
+                                  _obscure
+                                      ? Icons.visibility
+                                      : Icons.visibility_off,
+                                ),
+                                onPressed: () =>
+                                    setState(() => _obscure = !_obscure),
+                              ),
+                            ),
+                            validator: (v) => (v == null || v.isEmpty)
+                                ? 'Password is required'
+                                : null,
+                          ),
+                          Align(
+                            alignment: Alignment.centerRight,
+                            child: TextButton(
+                              onPressed: _loading || _googleLoading
+                                  ? null
+                                  : () => Navigator.of(context)
+                                      .pushNamed(AppRoutes.forgotPassword),
+                              child: const Text(
+                                'Forgot password?',
+                                style: TextStyle(
+                                  color: kUzinduziRed,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          SizedBox(
+                            height: 50,
+                            child: ElevatedButton(
+                              onPressed:
+                                  _loading || _googleLoading ? null : _submit,
+                              child: _loading
+                                  ? const SizedBox(
+                                      height: 22,
+                                      width: 22,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2.5,
+                                        valueColor: AlwaysStoppedAnimation(
+                                          Colors.white,
+                                        ),
+                                      ),
+                                    )
+                                  : const Text('Login'),
+                            ),
+                          ),
+                          const SizedBox(height: 20),
+                          const Row(children: [
+                            Expanded(
+                              child: Divider(color: kUzinduziDivider),
+                            ),
+                            Padding(
+                              padding: EdgeInsets.symmetric(horizontal: 12),
+                              child: Text(
+                                'or',
+                                style: TextStyle(
+                                  color: kUzinduziGrey,
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ),
+                            Expanded(
+                              child: Divider(color: kUzinduziDivider),
+                            ),
+                          ]),
+                          const SizedBox(height: 20),
+                          GoogleSignInButton(
+                            onPressed: _googleSignIn,
+                            loading: _googleLoading,
+                          ),
+                          const SizedBox(height: 24),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              const Text(
+                                'New here? ',
+                                style: TextStyle(color: kUzinduziGrey),
+                              ),
+                              TextButton(
+                                onPressed: _loading || _googleLoading
+                                    ? null
+                                    : () => Navigator.of(context)
+                                        .pushNamed(AppRoutes.register),
+                                child: const Text(
+                                  'Create an account',
+                                  style: TextStyle(
+                                    color: kUzinduziRed,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
                       ),
-                    ],
+                    ),
                   ),
-                ],
+                ),
+              ),
+            ),
+
+            // ── Version footer ───────────────────────
+            const _VersionFooter(),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────
+// Version footer — shows the app version and copies it on tap
+// ─────────────────────────────────────────────────────────────
+class _VersionFooter extends StatelessWidget {
+  const _VersionFooter();
+
+  @override
+  Widget build(BuildContext context) {
+    final version = AppConfig.appVersion;
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Text(
+            'v$version',
+            style: TextStyle(
+              fontSize: 11,
+              color: kUzinduziGrey.withValues(alpha: 0.7),
+              fontWeight: FontWeight.w500,
+              letterSpacing: 0.3,
+            ),
+          ),
+          const SizedBox(width: 6),
+          InkWell(
+            onTap: () {
+              Clipboard.setData(ClipboardData(text: version));
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('Version $version copied'),
+                  duration: const Duration(seconds: 2),
+                ),
+              );
+            },
+            borderRadius: BorderRadius.circular(4),
+            child: Padding(
+              padding: const EdgeInsets.all(4),
+              child: Icon(
+                Icons.copy_rounded,
+                size: 12,
+                color: kUzinduziGrey.withValues(alpha: 0.7),
               ),
             ),
           ),
-        ),
+        ],
       ),
-    ),
-  );
-}}
+    );
+  }
+}

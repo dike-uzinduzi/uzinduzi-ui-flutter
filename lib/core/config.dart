@@ -23,11 +23,21 @@ class AppConfig {
 
   static const Duration connectTimeout = Duration(seconds: 15);
   static const Duration receiveTimeout = Duration(seconds: 20);
-static const String defaultTrackArt =
-    '$cdnBase/placeholders/track-art-default.png';
-  static const String defaultAvatar     = '$cdnBase/placeholders/avatar-default.png';
-  static const String defaultCover      = '$cdnBase/placeholders/cover-default.jpg';
-  static const String defaultAlbumCover = '$cdnBase/placeholders/album-cover-default.png';
+
+  /// Semantic version injected by CI at build time. Falls back to 'dev'
+  /// when built locally without --dart-define.
+  static const String appVersion = String.fromEnvironment(
+    'APP_VERSION',
+    defaultValue: 'dev',
+  );
+
+  // ── Placeholder assets ───────────────────────────────
+  static const String defaultTrackArt =
+      '$cdnBase/placeholders/track-art-default.png';
+  static const String defaultAvatar =
+      '$cdnBase/placeholders/avatar-default.png';
+  static const String defaultCover =
+      '$cdnBase/placeholders/cover-default.jpg';
+  static const String defaultAlbumCover =
+      '$cdnBase/placeholders/album-cover-default.png';
 }
-
-

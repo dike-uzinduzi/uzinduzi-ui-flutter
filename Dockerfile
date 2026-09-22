@@ -1,33 +1,42 @@
+# ─────────────────────────────────────────────────────────
 # Stage 1: Build Flutter web assets
+# ─────────────────────────────────────────────────────────
 FROM gmeligio/flutter-web:3.47.4 AS builder
 
 WORKDIR /app
 
-# Copy pubspec files first for dependency caching.
-# --chown avoids the need for a separate `chown` step.
 COPY --chown=flutter:flutter pubspec.* ./
 RUN flutter pub get
 
-# Copy the rest of the source with the same ownership
 COPY --chown=flutter:flutter . .
 
-# Build the web app in release mode.
-# --pwa-strategy=none disables the Flutter service worker,
-# which otherwise caches main.dart.js and serves stale builds.
-RUN flutter build web --release --pwa-strategy=none
+# Read the semantic version from pubspec (e.g. "0.1.0+1" -> "0.1.0")
+RUN VERSION=$(grep '^version:' pubspec.yaml | cut -d ' ' -f 2 | cut -d '+' -f 1) && \
+    echo "Building version: $VERSION" && \
+    flutter build web --release \
+        --base-href /$VERSION/ \
+        --dart-define=APP_VERSION=$VERSION \
+        --pwa-strategy=none && \
+    # Remove the empty SW stub
+    rm -f /app/build/web/flutter_service_worker.js && \
+    # Restructure into /<version>/ + root index.html + version.json
+    mkdir -p /app/web_output/$VERSION && \
+    mv /app/build/web/* /app/web_output/$VERSION/ && \
+    cp /app/web_output/$VERSION/index.html /app/web_output/index.html && \
+    echo "{\"version\":\"$VERSION\"}" > /app/web_output/version.json && \
+    rm -rf /app/build/web && \
+    mv /app/web_output /app/build/web
 
+# ─────────────────────────────────────────────────────────
 # Stage 2: Serve with Nginx
+# ─────────────────────────────────────────────────────────
 FROM nginx:alpine
 
-# Remove default Nginx page
 RUN rm -rf /usr/share/nginx/html/*
 
-# Copy built web assets from builder
 COPY --from=builder /app/build/web /usr/share/nginx/html
 
-# Copy custom Nginx config for SPA routing + Firebase auth proxy
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 
 EXPOSE 80
-
 CMD ["nginx", "-g", "daemon off;"]
