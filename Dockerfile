@@ -10,7 +10,7 @@ RUN flutter pub get
 
 COPY --chown=flutter:flutter . .
 
-# Read the semantic version from pubspec (e.g. "0.1.0+1" -> "0.1.0")
+# Read the semantic version from pubspec (e.g. "0.0.1+1" -> "0.0.1")
 RUN VERSION=$(grep '^version:' pubspec.yaml | cut -d ' ' -f 2 | cut -d '+' -f 1) && \
     echo "Building version: $VERSION" && \
     flutter build web --release \
@@ -24,6 +24,11 @@ RUN VERSION=$(grep '^version:' pubspec.yaml | cut -d ' ' -f 2 | cut -d '+' -f 1)
     mv /app/build/web/* /app/web_output/$VERSION/ && \
     cp /app/web_output/$VERSION/index.html /app/web_output/index.html && \
     echo "{\"version\":\"$VERSION\"}" > /app/web_output/version.json && \
+    # Copy placeholders to the root so /placeholders/* URLs stay stable
+    # across version bumps. Backend + seed reference this path directly.
+    if [ -d /app/web_output/$VERSION/placeholders ]; then \
+        cp -r /app/web_output/$VERSION/placeholders /app/web_output/placeholders; \
+    fi && \
     rm -rf /app/build/web && \
     mv /app/web_output /app/build/web
 
