@@ -7,7 +7,6 @@ import '../../core/errors.dart';
 import '../../core/routes.dart';
 import '../../core/theme.dart';
 import '../../widgets/auth_error_dialog.dart';
-import '../../widgets/social_button.dart';
 import '../../widgets/uzinduzi_logo.dart';
 import 'auth_controller.dart';
 
@@ -23,7 +22,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _passwordController = TextEditingController(text: '');
   final _formKey = GlobalKey<FormState>();
   bool _loading = false;
-  bool _googleLoading = false;
   bool _obscure = true;
 
   @override
@@ -63,36 +61,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     }
   }
 
-  Future<void> _googleSignIn() async {
-    setState(() => _googleLoading = true);
-
-    try {
-      final pendingToken =
-          await ref.read(authControllerProvider.notifier).googleLogin();
-
-      if (!mounted) return;
-      if (pendingToken != null) {
-        Navigator.of(context).pushNamed(
-          AppRoutes.socialComplete,
-          arguments: {'pendingToken': pendingToken},
-        );
-      }
-    } catch (e) {
-      if (!mounted) return;
-      final message = e is AppError
-          ? e.message
-          : 'Google sign-in failed. Please try again.';
-
-      await AuthErrorDialog.show(
-        context,
-        title: 'Google sign-in failed',
-        message: message,
-      );
-    } finally {
-      if (mounted) setState(() => _googleLoading = false);
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -100,7 +68,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       body: SafeArea(
         child: Column(
           children: [
-            // ── Scrollable form ─────────────────────
             Expanded(
               child: Center(
                 child: SingleChildScrollView(
@@ -150,7 +117,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           TextFormField(
                             controller: _emailController,
                             keyboardType: TextInputType.emailAddress,
-                            enabled: !_loading && !_googleLoading,
+                            enabled: !_loading,
                             textInputAction: TextInputAction.next,
                             decoration: const InputDecoration(
                               labelText: 'Email',
@@ -164,7 +131,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           TextFormField(
                             controller: _passwordController,
                             obscureText: _obscure,
-                            enabled: !_loading && !_googleLoading,
+                            enabled: !_loading,
                             textInputAction: TextInputAction.done,
                             onFieldSubmitted: (_) => _submit(),
                             decoration: InputDecoration(
@@ -187,7 +154,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           Align(
                             alignment: Alignment.centerRight,
                             child: TextButton(
-                              onPressed: _loading || _googleLoading
+                              onPressed: _loading
                                   ? null
                                   : () => Navigator.of(context)
                                       .pushNamed(AppRoutes.forgotPassword),
@@ -204,8 +171,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           SizedBox(
                             height: 50,
                             child: ElevatedButton(
-                              onPressed:
-                                  _loading || _googleLoading ? null : _submit,
+                              onPressed: _loading ? null : _submit,
                               child: _loading
                                   ? const SizedBox(
                                       height: 22,
@@ -220,30 +186,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                   : const Text('Login'),
                             ),
                           ),
-                          const SizedBox(height: 20),
-                          const Row(children: [
-                            Expanded(
-                              child: Divider(color: kUzinduziDivider),
-                            ),
-                            Padding(
-                              padding: EdgeInsets.symmetric(horizontal: 12),
-                              child: Text(
-                                'or',
-                                style: TextStyle(
-                                  color: kUzinduziGrey,
-                                  fontSize: 12,
-                                ),
-                              ),
-                            ),
-                            Expanded(
-                              child: Divider(color: kUzinduziDivider),
-                            ),
-                          ]),
-                          const SizedBox(height: 20),
-                          GoogleSignInButton(
-                            onPressed: _googleSignIn,
-                            loading: _googleLoading,
-                          ),
                           const SizedBox(height: 24),
                           Row(
                             mainAxisAlignment: MainAxisAlignment.center,
@@ -253,7 +195,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                 style: TextStyle(color: kUzinduziGrey),
                               ),
                               TextButton(
-                                onPressed: _loading || _googleLoading
+                                onPressed: _loading
                                     ? null
                                     : () => Navigator.of(context)
                                         .pushNamed(AppRoutes.register),
@@ -274,8 +216,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 ),
               ),
             ),
-
-            // ── Version footer ───────────────────────
             const _VersionFooter(),
           ],
         ),
@@ -285,7 +225,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 }
 
 // ─────────────────────────────────────────────────────────────
-// Version footer — shows the app version and copies it on tap
+// Version footer
 // ─────────────────────────────────────────────────────────────
 class _VersionFooter extends StatelessWidget {
   const _VersionFooter();
