@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/theme.dart';
 import 'admin_guard.dart';
 import 'admin_routes.dart';
+import 'albums/admin_albums_screen.dart';
 import 'overview/admin_overview_screen.dart';
 import 'users/admin_users_screen.dart';
 import 'shared/admin_placeholder.dart';
@@ -44,6 +45,8 @@ class _AdminShellState extends ConsumerState<AdminShell> {
         return const AdminOverviewScreen();
       case AdminRoutes.users:
         return const AdminUsersScreen();
+      case AdminRoutes.albums:
+        return const AdminAlbumsScreen();
       default:
         return AdminPlaceholder(label: _sections[_index].label);
     }
@@ -51,53 +54,22 @@ class _AdminShellState extends ConsumerState<AdminShell> {
 
   @override
   Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final wide = constraints.maxWidth >= 900;
-
-        if (wide) {
-          return Scaffold(
-            backgroundColor: kUzinduziWhite,
-            body: Row(
-              children: [
-                _AdminSidebar(
-                  sections: _sections,
-                  selectedIndex: _index,
-                  onTap: (i) => setState(() => _index = i),
-                ),
-                const VerticalDivider(width: 1, color: kUzinduziDivider),
-                Expanded(child: _body()),
-              ],
-            ),
-          );
-        }
-
-        return Scaffold(
-          backgroundColor: kUzinduziWhite,
-          appBar: AppBar(
-            title: Text(
-              _sections[_index].label,
-              style: const TextStyle(fontWeight: FontWeight.w800),
-            ),
-            leading: IconButton(
-              icon: const Icon(Icons.close),
-              tooltip: 'Exit admin',
-              onPressed: () => Navigator.of(context).maybePop(),
-            ),
+    // Admin is desktop-only. The route is guarded by `AdminDesktopOnly`
+    // in app.dart, which blocks viewports narrower than 1024px. So by the
+    // time we get here, we always render the wide layout.
+    return Scaffold(
+      backgroundColor: kUzinduziWhite,
+      body: Row(
+        children: [
+          _AdminSidebar(
+            sections: _sections,
+            selectedIndex: _index,
+            onTap: (i) => setState(() => _index = i),
           ),
-          drawer: Drawer(
-            child: _AdminSidebar(
-              sections: _sections,
-              selectedIndex: _index,
-              onTap: (i) {
-                setState(() => _index = i);
-                Navigator.of(context).pop();
-              },
-            ),
-          ),
-          body: _body(),
-        );
-      },
+          const VerticalDivider(width: 1, color: kUzinduziDivider),
+          Expanded(child: _body()),
+        ],
+      ),
     );
   }
 }

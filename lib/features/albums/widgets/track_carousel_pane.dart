@@ -28,7 +28,8 @@ class _TrackCarouselPaneState extends State<TrackCarouselPane> {
 
   List<Track> get _tracks {
     final t = widget.album.tracks ?? [];
-    final sorted = [...t]..sort((a, b) => a.trackNumber.compareTo(b.trackNumber));
+    final sorted = [...t]
+      ..sort((a, b) => a.trackNumber.compareTo(b.trackNumber));
     return sorted;
   }
 
@@ -40,17 +41,8 @@ class _TrackCarouselPaneState extends State<TrackCarouselPane> {
     if (_index < _tracks.length - 1) setState(() => _index++);
   }
 
-  String _artUrl(Track t) {
-    final raw = (t as dynamic).trackArt as String?;
-    if (raw != null && raw.isNotEmpty) {
-      if (raw.startsWith('http')) return raw;
-      return '${AppConfig.cdnBase}/$raw';
-    }
-    final cover = widget.album.coverArt;
-    if (cover == null || cover.isEmpty) return AppConfig.defaultAlbumCover;
-    if (cover.startsWith('http')) return cover;
-    return '${AppConfig.cdnBase}/$cover';
-  }
+  /// Track art was removed — every track uses the album cover.
+  String get _albumCoverUrl => widget.album.coverImage;
 
   @override
   Widget build(BuildContext context) {
@@ -94,7 +86,9 @@ class _TrackCarouselPaneState extends State<TrackCarouselPane> {
               IconButton(
                 onPressed: _index < tracks.length - 1 ? _next : null,
                 icon: const Icon(Icons.chevron_right),
-                color: _index < tracks.length - 1 ? kUzinduziBlack : kUzinduziGrey,
+                color: _index < tracks.length - 1
+                    ? kUzinduziBlack
+                    : kUzinduziGrey,
               ),
             ],
           ),
@@ -102,7 +96,7 @@ class _TrackCarouselPaneState extends State<TrackCarouselPane> {
           ClipRRect(
             borderRadius: BorderRadius.circular(16),
             child: CachedNetworkImage(
-              imageUrl: _artUrl(track),
+              imageUrl: _albumCoverUrl,
               width: 280,
               height: 280,
               fit: BoxFit.cover,
@@ -111,7 +105,11 @@ class _TrackCarouselPaneState extends State<TrackCarouselPane> {
                 width: 280,
                 height: 280,
                 color: kUzinduziDivider,
-                child: const Icon(Icons.music_note, size: 64, color: kUzinduziGrey),
+                child: const Icon(
+                  Icons.music_note,
+                  size: 64,
+                  color: kUzinduziGrey,
+                ),
               ),
             ),
           ),
@@ -135,10 +133,14 @@ class _TrackCarouselPaneState extends State<TrackCarouselPane> {
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
               decoration: BoxDecoration(
-                color: liked ? kUzinduziRed.withValues(alpha: 0.08) : kUzinduziWhite,
+                color: liked
+                    ? kUzinduziRed.withValues(alpha: 0.08)
+                    : kUzinduziWhite,
                 borderRadius: BorderRadius.circular(999),
                 border: Border.all(
-                  color: liked ? kUzinduziRed.withValues(alpha: 0.3) : kUzinduziDivider,
+                  color: liked
+                      ? kUzinduziRed.withValues(alpha: 0.3)
+                      : kUzinduziDivider,
                 ),
               ),
               child: Row(
@@ -162,7 +164,8 @@ class _TrackCarouselPaneState extends State<TrackCarouselPane> {
               ),
             ),
           ),
-          if (track.trackDescription != null && track.trackDescription!.isNotEmpty) ...[
+          if (track.trackDescription != null &&
+              track.trackDescription!.isNotEmpty) ...[
             const SizedBox(height: 24),
             const Divider(color: kUzinduziDivider),
             const SizedBox(height: 16),
@@ -183,7 +186,11 @@ class _TrackCarouselPaneState extends State<TrackCarouselPane> {
               alignment: Alignment.centerLeft,
               child: Text(
                 track.trackDescription!,
-                style: const TextStyle(fontSize: 14, color: kUzinduziBlack, height: 1.5),
+                style: const TextStyle(
+                  fontSize: 14,
+                  color: kUzinduziBlack,
+                  height: 1.5,
+                ),
               ),
             ),
           ],
@@ -220,7 +227,6 @@ class _AttributeList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final t = track as dynamic;
     final rows = <MapEntry<String, String>>[];
 
     void add(String label, dynamic value) {
@@ -230,15 +236,15 @@ class _AttributeList extends StatelessWidget {
       rows.add(MapEntry(label, s));
     }
 
-    add('Featured', t.featuredArtists);
-    add('Written by', t.writer);
-    add('Performed by', t.performedBy);
-    add('Backing vocals', t.backingVocals);
-    add('Instruments', t.instrumentation);
-    add('Produced by', t.producer);
-    add('Mixing', t.mixingEngineer);
-    add('Mastering', t.masteringEngineer);
-    add('Special credits', t.specialCredits);
+    add('Featured', track.featuredArtists);
+    add('Written by', track.writer);
+    add('Performed by', track.performedBy);
+    add('Backing vocals', track.backingVocals);
+    add('Instruments', track.instrumentation);
+    add('Produced by', track.producer);
+    add('Mixing', track.mixingEngineer);
+    add('Mastering', track.masteringEngineer);
+    add('Special credits', track.specialCredits);
 
     if (rows.isEmpty) return const SizedBox.shrink();
 
@@ -247,31 +253,36 @@ class _AttributeList extends StatelessWidget {
       children: [
         const Divider(color: kUzinduziDivider),
         const SizedBox(height: 16),
-        ...rows.map((r) => Padding(
-              padding: const EdgeInsets.symmetric(vertical: 5),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  SizedBox(
-                    width: 120,
-                    child: Text(
-                      r.key,
-                      style: const TextStyle(fontSize: 12, color: kUzinduziGrey),
+        ...rows.map(
+          (r) => Padding(
+            padding: const EdgeInsets.symmetric(vertical: 5),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                SizedBox(
+                  width: 120,
+                  child: Text(
+                    r.key,
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: kUzinduziGrey,
                     ),
                   ),
-                  Expanded(
-                    child: Text(
-                      r.value,
-                      style: const TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                        color: kUzinduziBlack,
-                      ),
+                ),
+                Expanded(
+                  child: Text(
+                    r.value,
+                    style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: kUzinduziBlack,
                     ),
                   ),
-                ],
-              ),
-            )),
+                ),
+              ],
+            ),
+          ),
+        ),
       ],
     );
   }

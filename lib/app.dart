@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'core/routes.dart';
 import 'core/theme.dart';
+import 'features/admin/admin_desktop_guard.dart';
 import 'features/admin/admin_shell.dart';
 import 'features/auth/auth_controller.dart';
 import 'features/auth/forgot_password_screen.dart';
@@ -35,7 +36,9 @@ class UzinduziApp extends ConsumerWidget {
         AppRoutes.home:           (_) => const HomeShell(),
         AppRoutes.notifications:  (_) => const NotificationsScreen(),
         AppRoutes.profile:        (_) => const _ProfileRoute(),
-        AppRoutes.admin:          (_) => const AdminShell(),
+        AppRoutes.admin:          (_) => const AdminDesktopOnly(
+              child: AdminShell(),
+            ),
       },
     );
   }
