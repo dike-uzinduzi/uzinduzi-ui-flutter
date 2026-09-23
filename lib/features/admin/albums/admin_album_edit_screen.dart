@@ -9,6 +9,8 @@ import '../../../widgets/auth_error_dialog.dart';
 import 'admin_albums_provider.dart';
 import 'admin_track_edit_screen.dart';
 import 'admin_tracks_provider.dart';
+import 'package:dio/dio.dart';
+import 'package:image_picker/image_picker.dart';
 
 class AdminAlbumEditScreen extends ConsumerStatefulWidget {
   const AdminAlbumEditScreen({super.key, required this.albumId});
@@ -209,23 +211,73 @@ class _AdminAlbumEditScreenState extends ConsumerState<AdminAlbumEditScreen> {
                     padding: const EdgeInsets.all(24),
                     children: [
                       // Cover preview
-                      Center(
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(12),
-                          child: CachedNetworkImage(
-                            imageUrl: _album?['cover_art']?.toString() ?? '',
-                            width: 140,
-                            height: 140,
-                            fit: BoxFit.cover,
-                            errorWidget: (_, _, _) => Container(
-                              width: 140,
-                              height: 140,
-                              color: kUzinduziDivider,
-                              child: const Icon(Icons.album, size: 48),
-                            ),
-                          ),
-                        ),
-                      ),
+Center(
+  child: Stack(
+    alignment: Alignment.bottomRight,
+    children: [
+      ClipRRect(
+        borderRadius: BorderRadius.circular(12),
+        child: CachedNetworkImage(
+          imageUrl: _album?['cover_art']?.toString() ?? '',
+          width: 180,
+          height: 180,
+          fit: BoxFit.cover,
+          errorWidget: (_, _, _) => Container(
+            width: 180,
+            height: 180,
+            color: kUzinduziDivider,
+            child: const Icon(Icons.album, size: 48),
+          ),
+        ),
+      ),
+      if (_uploadingCover)
+        Positioned.fill(
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(12),
+            child: Container(
+              color: Colors.black.withValues(alpha: 0.5),
+              alignment: Alignment.center,
+              child: const SizedBox(
+                width: 26,
+                height: 26,
+                child: CircularProgressIndicator(
+                  color: Colors.white,
+                  strokeWidth: 2.5,
+                ),
+              ),
+            ),
+          ),
+        ),
+      Padding(
+        padding: const EdgeInsets.all(6),
+        child: Material(
+          color: kUzinduziRed,
+          shape: const CircleBorder(),
+          child: InkWell(
+            customBorder: const CircleBorder(),
+            onTap: _uploadingCover ? null : _pickAndUploadCover,
+            child: const Padding(
+              padding: EdgeInsets.all(8),
+              child: Icon(
+                Icons.camera_alt,
+                size: 18,
+                color: Colors.white,
+              ),
+            ),
+          ),
+        ),
+      ),
+    ],
+  ),
+),
+const SizedBox(height: 8),
+Center(
+  child: TextButton.icon(
+    onPressed: _uploadingCover ? null : _pickAndUploadCover,
+    icon: const Icon(Icons.upload_outlined, size: 16),
+    label: const Text('Change cover'),
+  ),
+),
                       const SizedBox(height: 24),
 
                       // Status toggles
@@ -386,6 +438,87 @@ class _AdminAlbumEditScreenState extends ConsumerState<AdminAlbumEditScreen> {
             ),
     );
   }
+  bool _uploadingCover = false;
+
+Future<void> _pickAndUploadCover() async {
+  final picked = await ImagePicker().pickImage(
+    source: ImageSource.gallery,
+    maxWidth: 1600,
+    maxHeight: 1600,
+    imageQuality: 88,
+  );
+  if (picked == null) return;
+
+  setState(() => _uploadingCover = true);
+  try {
+    final bytes = await picked.readAsBytes();
+    final contentType = _guessContentType(picked.name);
+
+    final presign = await ref.read(apiClientProvider).post(
+      '/api/users/me/media/album/presign',
+      body: {
+        'contentType': contentType,
+        'contentLength': bytes.length,
+      },
+    );
+    if (presign['success'] != true) {
+      throw AppError(presign['message']?.toString() ?? 'Could not start upload');
+    }
+
+    final uploadUrl = presign['uploadUrl'] as String;
+    final key = presign['key'] as String;
+
+    final rawDio = Dio();
+    final put = await rawDio.put(
+      uploadUrl,
+      data: Stream.fromIterable([bytes]),
+      options: Options(
+        headers: {
+          Headers.contentTypeHeader: contentType,
+          Headers.contentLengthHeader: bytes.length,
+        },
+      ),
+    );
+    if (put.statusCode == null || put.statusCode! >= 300) {
+      throw AppError('Upload failed (${put.statusCode})');
+    }
+
+    final confirm = await ref.read(apiClientProvider).post(
+      '/api/users/me/media/album',
+      body: {
+        'key': key,
+        'albumId': widget.albumId,
+      },
+    );
+    if (confirm['success'] != true) {
+      throw AppError(confirm['message']?.toString() ?? 'Could not save cover');
+    }
+
+    await _load();
+    ref.invalidate(adminAlbumsProvider);
+
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Cover updated')),
+    );
+  } catch (e) {
+    if (!mounted) return;
+    await AuthErrorDialog.show(
+      context,
+      title: 'Upload failed',
+      message: e is AppError ? e.message : '$e',
+    );
+  } finally {
+    if (mounted) setState(() => _uploadingCover = false);
+  }
+}
+
+String _guessContentType(String path) {
+  final lower = path.toLowerCase();
+  if (lower.endsWith('.png')) return 'image/png';
+  if (lower.endsWith('.webp')) return 'image/webp';
+  return 'image/jpeg';
+}
 }
 
 class _SectionLabel extends StatelessWidget {

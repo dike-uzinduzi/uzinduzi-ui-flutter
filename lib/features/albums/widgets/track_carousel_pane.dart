@@ -1,7 +1,6 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 
-import '../../../core/config.dart';
 import '../../../core/theme.dart';
 import '../album_models.dart';
 
