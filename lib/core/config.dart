@@ -32,8 +32,6 @@ class AppConfig {
   );
 
   // ── Placeholder assets ───────────────────────────────
-  static const String defaultTrackArt =
-      '$cdnBase/placeholders/track-art-default.png';
   static const String defaultAvatar =
       '$cdnBase/placeholders/avatar-default.png';
   static const String defaultCover =

@@ -288,8 +288,6 @@ class Track {
   final int likeCount;
 
   // Extended attributes
-  final String? trackArt;
-  final bool hasCustomTrackArt;
   final String? trackDescription;
   final String? writer;
   final String? performedBy;
@@ -311,8 +309,6 @@ class Track {
     required this.trackNumber,
     this.featuredArtists,
     this.likeCount = 0,
-    this.trackArt,
-    this.hasCustomTrackArt = false,
     this.trackDescription,
     this.writer,
     this.performedBy,
@@ -335,8 +331,6 @@ class Track {
         trackNumber: (j['trackNumber'] as num?)?.toInt() ?? 0,
         featuredArtists: j['featuredArtists'] as String?,
         likeCount: (j['likeCount'] as num?)?.toInt() ?? 0,
-        trackArt: j['trackArt'] as String?,
-        hasCustomTrackArt: j['hasCustomTrackArt'] as bool? ?? false,
         trackDescription: j['trackDescription'] as String?,
         writer: j['writer'] as String?,
         performedBy: j['performedBy'] as String?,
@@ -356,12 +350,5 @@ class Track {
   String get formattedDuration {
     final total = durationMs ~/ 1000;
     return '${total ~/ 60}:${(total % 60).toString().padLeft(2, '0')}';
-  }
-
-  String get artworkUrl {
-    final raw = trackArt;
-    if (raw == null || raw.isEmpty) return AppConfig.defaultTrackArt;
-    if (raw.startsWith('http')) return raw;
-    return '${AppConfig.cdnBase}/$raw';
   }
 }
