@@ -2,8 +2,8 @@ name: uzinduzi_mobile_app
 description: "Uzinduzi Africa — Launch Big, Grow Bigger. "
 publish_to: 'none'
 
-vversion: 0.0.2+2
-  
+version: 0.0.2+2
+
 environment:
   sdk: ^3.13.1
 build_pipe:
