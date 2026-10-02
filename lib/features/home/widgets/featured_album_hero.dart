@@ -110,7 +110,9 @@ class _HeroLoaded extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    final isInteractive = onSupport != null;
+
+    final cardContent = Container(
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
@@ -254,10 +256,11 @@ class _HeroLoaded extends StatelessWidget {
               ),
             ],
           ),
-          if (onSupport != null) ...[
+          if (isInteractive) ...[
             const SizedBox(height: 16),
             SizedBox(
               height: 44,
+              width: double.infinity,
               child: ElevatedButton.icon(
                 onPressed: onSupport,
                 icon: const Icon(Icons.favorite, size: 18),
@@ -280,8 +283,28 @@ class _HeroLoaded extends StatelessWidget {
         ],
       ),
     );
+
+    // Wrap in Material + InkWell for ripple feedback, and Semantics for a11y.
+    return Semantics(
+      button: isInteractive,
+      enabled: isInteractive,
+      label: isInteractive
+          ? '$ctaLabel for ${album.title} by ${album.artistName}'
+          : '${album.title} by ${album.artistName}',
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(16),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: onSupport,
+          borderRadius: BorderRadius.circular(16),
+          child: cardContent,
+        ),
+      ),
+    );
   }
 }
+
 class _LiveBadge extends StatefulWidget {
   const _LiveBadge();
   @override
