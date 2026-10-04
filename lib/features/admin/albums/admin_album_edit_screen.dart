@@ -1,16 +1,19 @@
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:image_picker/image_picker.dart';
 
 import '../../../core/api_client.dart';
 import '../../../core/errors.dart';
 import '../../../core/theme.dart';
 import '../../../widgets/auth_error_dialog.dart';
+import '../shared/admin_danger_zone.dart';
+import 'admin_album_launch_provider.dart';
+import 'admin_album_launch_screen.dart';
 import 'admin_albums_provider.dart';
 import 'admin_track_edit_screen.dart';
 import 'admin_tracks_provider.dart';
-import 'package:dio/dio.dart';
-import 'package:image_picker/image_picker.dart';
 
 class AdminAlbumEditScreen extends ConsumerStatefulWidget {
   const AdminAlbumEditScreen({super.key, required this.albumId});
@@ -37,6 +40,7 @@ class _AdminAlbumEditScreenState extends ConsumerState<AdminAlbumEditScreen> {
   bool _loading = true;
   bool _saving = false;
   bool _toggling = false;
+  bool _uploadingCover = false;
 
   Map<String, dynamic>? _album;
 
@@ -57,6 +61,7 @@ class _AdminAlbumEditScreenState extends ConsumerState<AdminAlbumEditScreen> {
     super.dispose();
   }
 
+  // ─── Load ───────────────────────────────────────────────────
   Future<void> _load() async {
     setState(() => _loading = true);
     try {
@@ -102,6 +107,7 @@ class _AdminAlbumEditScreenState extends ConsumerState<AdminAlbumEditScreen> {
     }
   }
 
+  // ─── Save metadata ──────────────────────────────────────────
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _saving = true);
@@ -147,6 +153,7 @@ class _AdminAlbumEditScreenState extends ConsumerState<AdminAlbumEditScreen> {
     }
   }
 
+  // ─── Toggle publish / feature ───────────────────────────────
   Future<void> _toggle(String action, bool value) async {
     setState(() => _toggling = true);
     try {
@@ -172,6 +179,160 @@ class _AdminAlbumEditScreenState extends ConsumerState<AdminAlbumEditScreen> {
     }
   }
 
+  // ─── Soft delete / restore (called by AdminDangerZone) ─────
+  Future<bool> _softDelete(bool nextDeleted) async {
+    try {
+      final api = ref.read(apiClientProvider);
+      final res = await api.dio.patch(
+        '/api/admin/albums/${widget.albumId}/soft-delete',
+        data: {'value': nextDeleted},
+      );
+      if (res.statusCode != 200) {
+        throw AppError('Soft-delete failed (${res.statusCode})');
+      }
+      await _load();
+      ref.invalidate(adminAlbumsProvider);
+      return true;
+    } catch (e) {
+      if (!mounted) return false;
+      await AuthErrorDialog.show(
+        context,
+        title: 'Action failed',
+        message: e is AppError ? e.message : '$e',
+      );
+      return false;
+    }
+  }
+
+  // ─── Hard delete (called by AdminDangerZone) ────────────────
+  Future<bool> _hardDelete() async {
+    try {
+      final api = ref.read(apiClientProvider);
+      final res = await api.dio.delete(
+        '/api/admin/albums/${widget.albumId}',
+      );
+      if (res.statusCode != 200 && res.statusCode != 204) {
+        final msg =
+            res.data is Map ? res.data['message']?.toString() : null;
+        throw AppError(msg ?? 'Delete failed (${res.statusCode})');
+      }
+      ref.invalidate(adminAlbumsProvider);
+      return true;
+    } catch (e) {
+      if (!mounted) return false;
+      await AuthErrorDialog.show(
+        context,
+        title: 'Delete failed',
+        message: e is AppError ? e.message : '$e',
+      );
+      return false;
+    }
+  }
+
+  // ─── Cover upload ───────────────────────────────────────────
+  Future<void> _pickAndUploadCover() async {
+    final picked = await ImagePicker().pickImage(
+      source: ImageSource.gallery,
+      maxWidth: 1600,
+      maxHeight: 1600,
+      imageQuality: 88,
+    );
+    if (picked == null) return;
+
+    setState(() => _uploadingCover = true);
+    try {
+      final bytes = await picked.readAsBytes();
+      final contentType = _guessContentType(picked.name);
+
+      final presign = await ref.read(apiClientProvider).post(
+        '/api/users/me/media/album/presign',
+        body: {
+          'contentType': contentType,
+          'contentLength': bytes.length,
+        },
+      );
+      if (presign['success'] != true) {
+        throw AppError(
+            presign['message']?.toString() ?? 'Could not start upload');
+      }
+
+      final uploadUrl = presign['uploadUrl'] as String;
+      final key = presign['key'] as String;
+
+      final rawDio = Dio();
+      final put = await rawDio.put(
+        uploadUrl,
+        data: Stream.fromIterable([bytes]),
+        options: Options(
+          headers: {
+            Headers.contentTypeHeader: contentType,
+            Headers.contentLengthHeader: bytes.length,
+          },
+        ),
+      );
+      if (put.statusCode == null || put.statusCode! >= 300) {
+        throw AppError('Upload failed (${put.statusCode})');
+      }
+
+      final confirm = await ref.read(apiClientProvider).post(
+        '/api/users/me/media/album',
+        body: {
+          'key': key,
+          'albumId': widget.albumId,
+        },
+      );
+      if (confirm['success'] != true) {
+        throw AppError(
+            confirm['message']?.toString() ?? 'Could not save cover');
+      }
+
+      await _load();
+      ref.invalidate(adminAlbumsProvider);
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Cover updated')),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      await AuthErrorDialog.show(
+        context,
+        title: 'Upload failed',
+        message: e is AppError ? e.message : '$e',
+      );
+    } finally {
+      if (mounted) setState(() => _uploadingCover = false);
+    }
+  }
+
+  String _guessContentType(String path) {
+    final lower = path.toLowerCase();
+    if (lower.endsWith('.png')) return 'image/png';
+    if (lower.endsWith('.webp')) return 'image/webp';
+    return 'image/jpeg';
+  }
+
+  // ─── Track edit modal ───────────────────────────────────────
+  Future<void> _openTrackEditor({AdminTrack? track}) async {
+    final changed = await showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: kUzinduziWhite,
+      useSafeArea: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (_) => AdminTrackEditSheet(
+        albumId: widget.albumId,
+        track: track,
+      ),
+    );
+    if (changed == true) {
+      ref.invalidate(adminTracksProvider(widget.albumId));
+    }
+  }
+
+  // ─── Build ──────────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -201,7 +362,9 @@ class _AdminAlbumEditScreenState extends ConsumerState<AdminAlbumEditScreen> {
         ],
       ),
       body: _loading
-          ? const Center(child: CircularProgressIndicator(color: kUzinduziRed))
+          ? const Center(
+              child: CircularProgressIndicator(color: kUzinduziRed),
+            )
           : Center(
               child: ConstrainedBox(
                 constraints: const BoxConstraints(maxWidth: 720),
@@ -210,77 +373,82 @@ class _AdminAlbumEditScreenState extends ConsumerState<AdminAlbumEditScreen> {
                   child: ListView(
                     padding: const EdgeInsets.all(24),
                     children: [
-                      // Cover preview
-Center(
-  child: Stack(
-    alignment: Alignment.bottomRight,
-    children: [
-      ClipRRect(
-        borderRadius: BorderRadius.circular(12),
-        child: CachedNetworkImage(
-          imageUrl: _album?['cover_art']?.toString() ?? '',
-          width: 180,
-          height: 180,
-          fit: BoxFit.cover,
-          errorWidget: (_, _, _) => Container(
-            width: 180,
-            height: 180,
-            color: kUzinduziDivider,
-            child: const Icon(Icons.album, size: 48),
-          ),
-        ),
-      ),
-      if (_uploadingCover)
-        Positioned.fill(
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(12),
-            child: Container(
-              color: Colors.black.withValues(alpha: 0.5),
-              alignment: Alignment.center,
-              child: const SizedBox(
-                width: 26,
-                height: 26,
-                child: CircularProgressIndicator(
-                  color: Colors.white,
-                  strokeWidth: 2.5,
-                ),
-              ),
-            ),
-          ),
-        ),
-      Padding(
-        padding: const EdgeInsets.all(6),
-        child: Material(
-          color: kUzinduziRed,
-          shape: const CircleBorder(),
-          child: InkWell(
-            customBorder: const CircleBorder(),
-            onTap: _uploadingCover ? null : _pickAndUploadCover,
-            child: const Padding(
-              padding: EdgeInsets.all(8),
-              child: Icon(
-                Icons.camera_alt,
-                size: 18,
-                color: Colors.white,
-              ),
-            ),
-          ),
-        ),
-      ),
-    ],
-  ),
-),
-const SizedBox(height: 8),
-Center(
-  child: TextButton.icon(
-    onPressed: _uploadingCover ? null : _pickAndUploadCover,
-    icon: const Icon(Icons.upload_outlined, size: 16),
-    label: const Text('Change cover'),
-  ),
-),
+                      // ── Cover preview ──────────────────
+                      Center(
+                        child: Stack(
+                          alignment: Alignment.bottomRight,
+                          children: [
+                            ClipRRect(
+                              borderRadius: BorderRadius.circular(12),
+                              child: CachedNetworkImage(
+                                imageUrl:
+                                    _album?['cover_art']?.toString() ?? '',
+                                width: 180,
+                                height: 180,
+                                fit: BoxFit.cover,
+                                errorWidget: (_, _, _) => Container(
+                                  width: 180,
+                                  height: 180,
+                                  color: kUzinduziDivider,
+                                  child: const Icon(Icons.album, size: 48),
+                                ),
+                              ),
+                            ),
+                            if (_uploadingCover)
+                              Positioned.fill(
+                                child: ClipRRect(
+                                  borderRadius: BorderRadius.circular(12),
+                                  child: Container(
+                                    color:
+                                        Colors.black.withValues(alpha: 0.5),
+                                    alignment: Alignment.center,
+                                    child: const SizedBox(
+                                      width: 26,
+                                      height: 26,
+                                      child: CircularProgressIndicator(
+                                        color: Colors.white,
+                                        strokeWidth: 2.5,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            Padding(
+                              padding: const EdgeInsets.all(6),
+                              child: Material(
+                                color: kUzinduziRed,
+                                shape: const CircleBorder(),
+                                child: InkWell(
+                                  customBorder: const CircleBorder(),
+                                  onTap: _uploadingCover
+                                      ? null
+                                      : _pickAndUploadCover,
+                                  child: const Padding(
+                                    padding: EdgeInsets.all(8),
+                                    child: Icon(
+                                      Icons.camera_alt,
+                                      size: 18,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Center(
+                        child: TextButton.icon(
+                          onPressed:
+                              _uploadingCover ? null : _pickAndUploadCover,
+                          icon: const Icon(Icons.upload_outlined, size: 16),
+                          label: const Text('Change cover'),
+                        ),
+                      ),
                       const SizedBox(height: 24),
 
-                      // Status toggles
+                      // ── Status toggles (publish / feature only) ──
                       Wrap(
                         spacing: 12,
                         runSpacing: 12,
@@ -309,37 +477,51 @@ Center(
                                       !(_album?['is_featured'] == true),
                                     ),
                           ),
-                          _ActionToggle(
-                            label: (_album?['is_deleted'] == true)
-                                ? 'Restore'
-                                : 'Delete',
-                            active: _album?['is_deleted'] == true,
-                            danger: true,
-                            onTap: _toggling
-                                ? null
-                                : () => _toggle(
-                                      'soft-delete',
-                                      !(_album?['is_deleted'] == true),
-                                    ),
-                          ),
                         ],
                       ),
+
+                      // ── Danger zone (soft-delete / restore + hard-delete) ──
+                      const SizedBox(height: 20),
+                      const Divider(color: kUzinduziDivider),
+                      const SizedBox(height: 12),
+                      const _SectionLabel('Danger zone'),
+                      AdminDangerZone(
+                        resourceLabel: 'album',
+                        isDeleted: _album?['is_deleted'] == true,
+                        onSoftDelete: _softDelete,
+                        onHardDelete: _hardDelete,
+                        preflight: () => preflightAlbum(
+                          ref.read(apiClientProvider),
+                          widget.albumId,
+                        ),
+                        onHardDeleted: () {
+                          if (!mounted) return;
+                          ref.invalidate(adminAlbumsProvider);
+                          Navigator.of(context).pop();
+                        },
+                      ),
+
                       const SizedBox(height: 24),
                       const Divider(color: kUzinduziDivider),
                       const SizedBox(height: 16),
 
+                      // ── Metadata ───────────────────────
                       _SectionLabel('Metadata'),
                       TextFormField(
                         controller: _title,
-                        decoration: const InputDecoration(labelText: 'Title'),
+                        decoration:
+                            const InputDecoration(labelText: 'Title'),
                         validator: (v) =>
-                            (v == null || v.trim().isEmpty) ? 'Required' : null,
+                            (v == null || v.trim().isEmpty)
+                                ? 'Required'
+                                : null,
                       ),
                       const SizedBox(height: 14),
                       DropdownButtonFormField<String>(
                         initialValue: _albumType,
-                        decoration:
-                            const InputDecoration(labelText: 'Album type'),
+                        decoration: const InputDecoration(
+                          labelText: 'Album type',
+                        ),
                         items: const [
                           DropdownMenuItem(
                               value: 'album', child: Text('Album')),
@@ -396,6 +578,7 @@ Center(
                       const Divider(color: kUzinduziDivider),
                       const SizedBox(height: 16),
 
+                      // ── Rights & credits ───────────────
                       _SectionLabel('Rights & credits'),
                       TextFormField(
                         controller: _publisher,
@@ -428,7 +611,22 @@ Center(
                       const Divider(color: kUzinduziDivider),
                       const SizedBox(height: 16),
 
-                      _TracksSection(albumId: widget.albumId),
+                      // ── Tracks ─────────────────────────
+                      _TracksSection(
+                        albumId: widget.albumId,
+                        onOpenEditor: _openTrackEditor,
+                      ),
+
+                      const SizedBox(height: 24),
+                      const Divider(color: kUzinduziDivider),
+                      const SizedBox(height: 16),
+
+                      // ── Launch ─────────────────────────
+                      _LaunchSection(
+                        albumId: widget.albumId,
+                        albumTitle:
+                            _album?['title']?.toString() ?? 'Album',
+                      ),
 
                       const SizedBox(height: 32),
                     ],
@@ -438,147 +636,19 @@ Center(
             ),
     );
   }
-  bool _uploadingCover = false;
-
-Future<void> _pickAndUploadCover() async {
-  final picked = await ImagePicker().pickImage(
-    source: ImageSource.gallery,
-    maxWidth: 1600,
-    maxHeight: 1600,
-    imageQuality: 88,
-  );
-  if (picked == null) return;
-
-  setState(() => _uploadingCover = true);
-  try {
-    final bytes = await picked.readAsBytes();
-    final contentType = _guessContentType(picked.name);
-
-    final presign = await ref.read(apiClientProvider).post(
-      '/api/users/me/media/album/presign',
-      body: {
-        'contentType': contentType,
-        'contentLength': bytes.length,
-      },
-    );
-    if (presign['success'] != true) {
-      throw AppError(presign['message']?.toString() ?? 'Could not start upload');
-    }
-
-    final uploadUrl = presign['uploadUrl'] as String;
-    final key = presign['key'] as String;
-
-    final rawDio = Dio();
-    final put = await rawDio.put(
-      uploadUrl,
-      data: Stream.fromIterable([bytes]),
-      options: Options(
-        headers: {
-          Headers.contentTypeHeader: contentType,
-          Headers.contentLengthHeader: bytes.length,
-        },
-      ),
-    );
-    if (put.statusCode == null || put.statusCode! >= 300) {
-      throw AppError('Upload failed (${put.statusCode})');
-    }
-
-    final confirm = await ref.read(apiClientProvider).post(
-      '/api/users/me/media/album',
-      body: {
-        'key': key,
-        'albumId': widget.albumId,
-      },
-    );
-    if (confirm['success'] != true) {
-      throw AppError(confirm['message']?.toString() ?? 'Could not save cover');
-    }
-
-    await _load();
-    ref.invalidate(adminAlbumsProvider);
-
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Cover updated')),
-    );
-  } catch (e) {
-    if (!mounted) return;
-    await AuthErrorDialog.show(
-      context,
-      title: 'Upload failed',
-      message: e is AppError ? e.message : '$e',
-    );
-  } finally {
-    if (mounted) setState(() => _uploadingCover = false);
-  }
-}
-
-String _guessContentType(String path) {
-  final lower = path.toLowerCase();
-  if (lower.endsWith('.png')) return 'image/png';
-  if (lower.endsWith('.webp')) return 'image/webp';
-  return 'image/jpeg';
-}
-}
-
-class _SectionLabel extends StatelessWidget {
-  const _SectionLabel(this.text);
-  final String text;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
-      child: Text(
-        text.toUpperCase(),
-        style: const TextStyle(
-          fontSize: 11,
-          fontWeight: FontWeight.w800,
-          letterSpacing: 1.2,
-          color: kUzinduziGrey,
-        ),
-      ),
-    );
-  }
-}
-
-class _ActionToggle extends StatelessWidget {
-  const _ActionToggle({
-    required this.label,
-    required this.active,
-    this.danger = false,
-    this.onTap,
-  });
-
-  final String label;
-  final bool active;
-  final bool danger;
-  final VoidCallback? onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final color = danger ? kUzinduziRed : kUzinduziBlack;
-    return OutlinedButton(
-      onPressed: onTap,
-      style: OutlinedButton.styleFrom(
-        foregroundColor: color,
-        side: BorderSide(
-          color: active ? color : kUzinduziDivider,
-        ),
-        backgroundColor:
-            active ? color.withValues(alpha: 0.06) : Colors.transparent,
-      ),
-      child: Text(label),
-    );
-  }
 }
 
 // ─────────────────────────────────────────────────────────────
 // Tracks section
 // ─────────────────────────────────────────────────────────────
 class _TracksSection extends ConsumerWidget {
-  const _TracksSection({required this.albumId});
+  const _TracksSection({
+    required this.albumId,
+    required this.onOpenEditor,
+  });
+
   final String albumId;
+  final Future<void> Function({AdminTrack? track}) onOpenEditor;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -600,16 +670,7 @@ class _TracksSection extends ConsumerWidget {
             ),
             const Spacer(),
             TextButton.icon(
-              onPressed: () async {
-                final added = await Navigator.of(context).push<bool>(
-                  MaterialPageRoute(
-                    builder: (_) => AdminTrackEditScreen(albumId: albumId),
-                  ),
-                );
-                if (added == true) {
-                  ref.invalidate(adminTracksProvider(albumId));
-                }
-              },
+              onPressed: () => onOpenEditor(),
               icon: const Icon(Icons.add, size: 16),
               label: const Text('Add track'),
             ),
@@ -633,6 +694,7 @@ class _TracksSection extends ConsumerWidget {
                   _TrackRow(
                     track: t,
                     albumId: albumId,
+                    onEdit: () => onOpenEditor(track: t),
                     onChanged: () =>
                         ref.invalidate(adminTracksProvider(albumId)),
                   ),
@@ -663,11 +725,13 @@ class _TrackRow extends ConsumerWidget {
   const _TrackRow({
     required this.track,
     required this.albumId,
+    required this.onEdit,
     required this.onChanged,
   });
 
   final AdminTrack track;
   final String albumId;
+  final VoidCallback onEdit;
   final VoidCallback onChanged;
 
   @override
@@ -719,17 +783,7 @@ class _TrackRow extends ConsumerWidget {
           IconButton(
             icon: const Icon(Icons.edit_outlined, size: 18),
             tooltip: 'Edit',
-            onPressed: () async {
-              final edited = await Navigator.of(context).push<bool>(
-                MaterialPageRoute(
-                  builder: (_) => AdminTrackEditScreen(
-                    albumId: albumId,
-                    track: track,
-                  ),
-                ),
-              );
-              if (edited == true) onChanged();
-            },
+            onPressed: onEdit,
           ),
           IconButton(
             icon: const Icon(Icons.delete_outline, size: 18),
@@ -774,6 +828,173 @@ class _TrackRow extends ConsumerWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────
+// Launch section
+// ─────────────────────────────────────────────────────────────
+class _LaunchSection extends ConsumerWidget {
+  const _LaunchSection({
+    required this.albumId,
+    required this.albumTitle,
+  });
+
+  final String albumId;
+  final String albumTitle;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final launchAsync = ref.watch(adminAlbumLaunchProvider(albumId));
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            const Text(
+              'LAUNCH',
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w800,
+                letterSpacing: 1.2,
+                color: kUzinduziGrey,
+              ),
+            ),
+            const Spacer(),
+            TextButton.icon(
+              onPressed: () async {
+                final changed = await Navigator.of(context).push<bool>(
+                  MaterialPageRoute(
+                    builder: (_) => AdminAlbumLaunchScreen(
+                      albumId: albumId,
+                      albumTitle: albumTitle,
+                    ),
+                  ),
+                );
+                if (changed == true) {
+                  ref.invalidate(adminAlbumLaunchProvider(albumId));
+                }
+              },
+              icon: const Icon(Icons.open_in_new, size: 16),
+              label: const Text('Manage launch'),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        launchAsync.when(
+          data: (launch) {
+            if (launch == null) {
+              return const Padding(
+                padding: EdgeInsets.symmetric(vertical: 12),
+                child: Text(
+                  'No launch scheduled. Tap "Manage launch" to set one up.',
+                  style: TextStyle(color: kUzinduziGrey, fontSize: 13),
+                ),
+              );
+            }
+            final color = switch (launch.status) {
+              'active' => kStatusLive,
+              'scheduled' => kUzinduziRed,
+              _ => kUzinduziGrey,
+            };
+            return Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              child: Row(
+                children: [
+                  Icon(Icons.circle, size: 10, color: color),
+                  const SizedBox(width: 8),
+                  Text(
+                    launch.status.toUpperCase(),
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 0.6,
+                      color: color,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      '${_fmt(launch.startsAt)} → ${_fmt(launch.endsAt)}',
+                      style: const TextStyle(
+                        fontSize: 13,
+                        color: kUzinduziGrey,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+          loading: () => const Padding(
+            padding: EdgeInsets.symmetric(vertical: 12),
+            child: LinearProgressIndicator(minHeight: 2),
+          ),
+          error: (e, _) => Padding(
+            padding: const EdgeInsets.symmetric(vertical: 12),
+            child: Text(
+              'Could not load launch: $e',
+              style: const TextStyle(color: kUzinduziRed, fontSize: 12),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  static String _fmt(DateTime d) =>
+      '${d.year}-${d.month.toString().padLeft(2, '0')}-'
+      '${d.day.toString().padLeft(2, '0')}';
+}
+
+// ─────────────────────────────────────────────────────────────
+// Shared widgets
+// ─────────────────────────────────────────────────────────────
+class _SectionLabel extends StatelessWidget {
+  const _SectionLabel(this.text);
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Text(
+        text.toUpperCase(),
+        style: const TextStyle(
+          fontSize: 11,
+          fontWeight: FontWeight.w800,
+          letterSpacing: 1.2,
+          color: kUzinduziGrey,
+        ),
+      ),
+    );
+  }
+}
+class _ActionToggle extends StatelessWidget {
+  const _ActionToggle({
+    required this.label,
+    required this.active,
+    this.onTap,
+  });
+
+  final String label;
+  final bool active;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = kUzinduziBlack;
+    return OutlinedButton(
+      onPressed: onTap,
+      style: OutlinedButton.styleFrom(
+        foregroundColor: color,
+        side: BorderSide(color: active ? color : kUzinduziDivider),
+        backgroundColor:
+            active ? color.withValues(alpha: 0.06) : Colors.transparent,
+      ),
+      child: Text(label),
     );
   }
 }
