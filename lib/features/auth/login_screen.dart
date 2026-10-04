@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/config.dart';
@@ -236,40 +235,15 @@ class _VersionFooter extends StatelessWidget {
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Text(
-            'v$version',
-            style: TextStyle(
-              fontSize: 11,
-              color: kUzinduziGrey.withValues(alpha: 0.7),
-              fontWeight: FontWeight.w500,
-              letterSpacing: 0.3,
-            ),
-          ),
-          const SizedBox(width: 6),
-          InkWell(
-            onTap: () {
-              Clipboard.setData(ClipboardData(text: version));
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text('Version $version copied'),
-                  duration: const Duration(seconds: 2),
-                ),
-              );
-            },
-            borderRadius: BorderRadius.circular(4),
-            child: Padding(
-              padding: const EdgeInsets.all(4),
-              child: Icon(
-                Icons.copy_rounded,
-                size: 12,
-                color: kUzinduziGrey.withValues(alpha: 0.7),
-              ),
-            ),
-          ),
-        ],
+      child: Text(
+        'v$version',
+        textAlign: TextAlign.center,
+        style: TextStyle(
+          fontSize: 11,
+          color: kUzinduziGrey.withValues(alpha: 0.7),
+          fontWeight: FontWeight.w500,
+          letterSpacing: 0.3,
+        ),
       ),
     );
   }
