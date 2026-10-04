@@ -5,6 +5,7 @@ class AdminRoutes {
   static const String users      = '/admin/users';
   static const String artists    = '/admin/artists';
   static const String albums     = '/admin/albums';
+  static const String tiers      = '/admin/tiers';
   static const String launches   = '/admin/launches';
   static const String payments   = '/admin/payments';
   static const String plaques    = '/admin/plaques';

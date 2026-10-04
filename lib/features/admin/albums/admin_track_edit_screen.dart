@@ -317,6 +317,30 @@ class _AdminTrackEditScreenState
   }
 }
 
+
+class AdminTrackEditSheet extends StatelessWidget {
+  const AdminTrackEditSheet({
+    super.key,
+    required this.albumId,
+    this.track,
+  });
+
+  final String albumId;
+  final AdminTrack? track;
+
+  @override
+  Widget build(BuildContext context) {
+    // Constrain height so the sheet scrolls well on tall forms
+    final maxH = MediaQuery.of(context).size.height * 0.92;
+    return ConstrainedBox(
+      constraints: BoxConstraints(maxHeight: maxH),
+      child: AdminTrackEditScreen(
+        albumId: albumId,
+        track: track,
+      ),
+    );
+  }
+}
 class _SectionLabel extends StatelessWidget {
   const _SectionLabel(this.text);
   final String text;

@@ -5,9 +5,14 @@ import '../../core/theme.dart';
 import 'admin_guard.dart';
 import 'admin_routes.dart';
 import 'albums/admin_albums_screen.dart';
+import 'artists/admin_artists_screen.dart';
 import 'overview/admin_overview_screen.dart';
-import 'users/admin_users_screen.dart';
 import 'shared/admin_placeholder.dart';
+import 'tiers/admin_tiers_screen.dart';
+import 'users/admin_users_screen.dart';
+import 'plaques/admin_plaques_screen.dart';
+
+
 
 class AdminShell extends ConsumerStatefulWidget {
   const AdminShell({super.key});
@@ -24,6 +29,7 @@ class _AdminShellState extends ConsumerState<AdminShell> {
     _AdminSection(AdminRoutes.users,      'Users',      Icons.people_outline),
     _AdminSection(AdminRoutes.artists,    'Artists',    Icons.mic_none),
     _AdminSection(AdminRoutes.albums,     'Albums',     Icons.album_outlined),
+    _AdminSection(AdminRoutes.tiers,      'Tiers',      Icons.military_tech_outlined),
     _AdminSection(AdminRoutes.launches,   'Launches',   Icons.rocket_launch_outlined),
     _AdminSection(AdminRoutes.payments,   'Payments',   Icons.payments_outlined),
     _AdminSection(AdminRoutes.plaques,    'Plaques',    Icons.workspace_premium_outlined),
@@ -45,8 +51,14 @@ class _AdminShellState extends ConsumerState<AdminShell> {
         return const AdminOverviewScreen();
       case AdminRoutes.users:
         return const AdminUsersScreen();
+      case AdminRoutes.artists:
+        return const AdminArtistsScreen();
       case AdminRoutes.albums:
         return const AdminAlbumsScreen();
+      case AdminRoutes.tiers:
+        return const AdminTiersScreen();
+      case AdminRoutes.plaques:
+        return const AdminPlaquesScreen();
       default:
         return AdminPlaceholder(label: _sections[_index].label);
     }
@@ -54,9 +66,6 @@ class _AdminShellState extends ConsumerState<AdminShell> {
 
   @override
   Widget build(BuildContext context) {
-    // Admin is desktop-only. The route is guarded by `AdminDesktopOnly`
-    // in app.dart, which blocks viewports narrower than 1024px. So by the
-    // time we get here, we always render the wide layout.
     return Scaffold(
       backgroundColor: kUzinduziWhite,
       body: Row(
@@ -155,10 +164,12 @@ class _AdminSidebar extends StatelessWidget {
                             s.label,
                             style: TextStyle(
                               fontSize: 14,
-                              fontWeight:
-                                  selected ? FontWeight.w700 : FontWeight.w500,
-                              color:
-                                  selected ? kUzinduziRed : kUzinduziBlack,
+                              fontWeight: selected
+                                  ? FontWeight.w700
+                                  : FontWeight.w500,
+                              color: selected
+                                  ? kUzinduziRed
+                                  : kUzinduziBlack,
                             ),
                           ),
                         ],
