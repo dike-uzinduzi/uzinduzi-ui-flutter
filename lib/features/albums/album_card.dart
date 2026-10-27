@@ -18,14 +18,16 @@ class AlbumCard extends StatelessWidget {
     return '${AppConfig.cdnBase}/$raw';
   }
 
-  String? _statusLabel(Album album) {
+  /// Always returns a label — defaults to UPCOMING when no launch
+  /// or an unrecognised status is present.
+  String _statusLabel(Album album) {
     final launch = album.launch;
     if (launch != null) {
       if (launch.isActive) return 'LIVE';
       if (launch.isScheduled) return 'UPCOMING';
       if (launch.isEnded) return 'ENDED';
     }
-    return null;
+    return 'UPCOMING';
   }
 
   Color _statusColor(String label) => switch (label) {
@@ -45,7 +47,7 @@ class AlbumCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Cover with status badge
+          // Cover with status badge (always visible)
           Expanded(
             child: Stack(
               children: [
@@ -58,49 +60,50 @@ class AlbumCard extends StatelessWidget {
                       memCacheWidth: 600,
                       errorWidget: (_, _, _) => Container(
                         color: kUzinduziDivider,
-                        child:
-                            const Icon(Icons.album, color: kUzinduziGrey),
+                        child: const Icon(
+                          Icons.album,
+                          color: kUzinduziGrey,
+                        ),
                       ),
                     ),
                   ),
                 ),
-                if (status != null)
-                  Positioned(
-                    top: 8,
-                    right: 8,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 4,
-                      ),
-                      decoration: BoxDecoration(
-                        color: _statusColor(status),
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          if (status == 'LIVE') ...[
-                            const Icon(
-                              Icons.circle,
-                              size: 6,
-                              color: Colors.white,
-                            ),
-                            const SizedBox(width: 4),
-                          ],
-                          Text(
-                            status,
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 9,
-                              fontWeight: FontWeight.w800,
-                              letterSpacing: 0.6,
-                            ),
+                Positioned(
+                  top: 8,
+                  right: 8,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
+                    decoration: BoxDecoration(
+                      color: _statusColor(status),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        if (status == 'LIVE') ...[
+                          const Icon(
+                            Icons.circle,
+                            size: 6,
+                            color: Colors.white,
                           ),
+                          const SizedBox(width: 4),
                         ],
-                      ),
+                        Text(
+                          status,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 9,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: 0.6,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
+                ),
               ],
             ),
           ),
