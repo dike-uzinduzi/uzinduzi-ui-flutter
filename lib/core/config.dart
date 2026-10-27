@@ -28,7 +28,7 @@ class AppConfig {
   /// when built locally without --dart-define.
   static const String appVersion = String.fromEnvironment(
     'APP_VERSION',
-    defaultValue: 'dev',
+    defaultValue: '0.0.5',
   );
 
   // ── Placeholder assets ───────────────────────────────
