@@ -26,75 +26,79 @@ class HomeScreen extends ConsumerWidget {
           ),
         ],
       ),
-     body: Center(
-  child: ConstrainedBox(
-    constraints: const BoxConstraints(maxWidth: 720),
-    child: Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const SizedBox(height: 12),
-          Text(
-            'Welcome, ${user?.userName ?? "there"} ',
-            style: const TextStyle(
-              fontSize: 26,
-              fontWeight: FontWeight.w800,
-              color: kUzinduziBlack,
-              letterSpacing: -0.4,
+      body: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 720),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const SizedBox(height: 12),
+                Text(
+                  'Welcome, ${_displayName(user?.userName)}',
+                  style: const TextStyle(
+                    fontSize: 26,
+                    fontWeight: FontWeight.w800,
+                    color: kUzinduziBlack,
+                    letterSpacing: -0.4,
+                  ),
+                ),
+                const SizedBox(height: 10),
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: kUzinduziRed.withValues(alpha: 0.08),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Text(
+                    (user?.role ?? 'unknown').toUpperCase(),
+                    style: const TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w800,
+                      color: kUzinduziRed,
+                      letterSpacing: 0.6,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 40),
+                const Text(
+                  'Coming next',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                    color: kUzinduziBlack,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                const _ComingSoonRow(
+                  icon: Icons.album_outlined,
+                  label: 'Browse albums',
+                ),
+                const _ComingSoonRow(
+                  icon: Icons.workspace_premium_outlined,
+                  label: 'My plaques',
+                ),
+                const _ComingSoonRow(
+                  icon: Icons.person_outline,
+                  label: 'Profile',
+                ),
+              ],
             ),
           ),
-          const SizedBox(height: 6),
-          Text(
-            user?.email ?? '',
-            style: const TextStyle(fontSize: 14, color: kUzinduziGrey),
-          ),
-          const SizedBox(height: 4),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-            decoration: BoxDecoration(
-              color: kUzinduziRed.withValues(alpha: 0.08),
-              borderRadius: BorderRadius.circular(6),
-            ),
-            child: Text(
-              (user?.role ?? 'unknown').toUpperCase(),
-              style: const TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.w800,
-                color: kUzinduziRed,
-                letterSpacing: 0.6,
-              ),
-            ),
-          ),
-          const SizedBox(height: 40),
-          const Text(
-            'Coming next',
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w700,
-              color: kUzinduziBlack,
-            ),
-          ),
-          const SizedBox(height: 12),
-          const _ComingSoonRow(
-            icon: Icons.album_outlined,
-            label: 'Browse albums',
-          ),
-          const _ComingSoonRow(
-            icon: Icons.workspace_premium_outlined,
-            label: 'My plaques',
-          ),
-          const _ComingSoonRow(
-            icon: Icons.person_outline,
-            label: 'Profile',
-          ),
-        ],
+        ),
       ),
-    ),
-  ),
-),
     );
   }
+}
+
+/// Capitalises the first letter of the user's display name.
+/// Falls back to "there" if the name is empty.
+String _displayName(String? raw) {
+  final s = (raw ?? '').trim();
+  if (s.isEmpty) return 'there';
+  return '${s[0].toUpperCase()}${s.substring(1)}';
 }
 
 class _ComingSoonRow extends StatelessWidget {

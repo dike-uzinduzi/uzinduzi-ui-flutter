@@ -38,6 +38,20 @@ const kPaymentMethods = <PaymentMethod>[
     iconSvg: 'assets/icons/pesepay-logo.svg',
     iconType: PaymentIconType.svg,
   ),
+  PaymentMethod(
+    key: 'CASH_PICKUP',
+    label: 'Cash pickup',
+    description: 'Arrange a pickup with the Uzinduzi team',
+    icon: Icons.storefront_outlined,
+    iconType: PaymentIconType.material,
+  ),
+  PaymentMethod(
+    key: 'OTHER',
+    label: 'Other method',
+    description: 'WorldRemit, Western Union, or another option',
+    icon: Icons.more_horiz,
+    iconType: PaymentIconType.material,
+  ),
 ];
 
 class PaymentPicker extends StatelessWidget {

@@ -18,9 +18,26 @@ class AlbumCard extends StatelessWidget {
     return '${AppConfig.cdnBase}/$raw';
   }
 
+  String? _statusLabel(Album album) {
+    final launch = album.launch;
+    if (launch != null) {
+      if (launch.isActive) return 'LIVE';
+      if (launch.isScheduled) return 'UPCOMING';
+      if (launch.isEnded) return 'ENDED';
+    }
+    return null;
+  }
+
+  Color _statusColor(String label) => switch (label) {
+        'LIVE' => kStatusLive,
+        'UPCOMING' => kUzinduziRed,
+        'ENDED' => kUzinduziGrey,
+        _ => kUzinduziGrey,
+      };
+
   @override
   Widget build(BuildContext context) {
-    final live = album.launch?.isActive == true;
+    final status = _statusLabel(album);
 
     return InkWell(
       onTap: onTap,
@@ -28,7 +45,7 @@ class AlbumCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Cover with LIVE badge
+          // Cover with status badge
           Expanded(
             child: Stack(
               children: [
@@ -41,29 +58,39 @@ class AlbumCard extends StatelessWidget {
                       memCacheWidth: 600,
                       errorWidget: (_, _, _) => Container(
                         color: kUzinduziDivider,
-                        child: const Icon(Icons.album, color: kUzinduziGrey),
+                        child:
+                            const Icon(Icons.album, color: kUzinduziGrey),
                       ),
                     ),
                   ),
                 ),
-                if (live)
+                if (status != null)
                   Positioned(
                     top: 8,
                     right: 8,
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 4,
+                      ),
                       decoration: BoxDecoration(
-                        color: kStatusLive,
+                        color: _statusColor(status),
                         borderRadius: BorderRadius.circular(6),
                       ),
-                      child: const Row(
+                      child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(Icons.circle, size: 6, color: Colors.white),
-                          SizedBox(width: 4),
+                          if (status == 'LIVE') ...[
+                            const Icon(
+                              Icons.circle,
+                              size: 6,
+                              color: Colors.white,
+                            ),
+                            const SizedBox(width: 4),
+                          ],
                           Text(
-                            'LIVE',
-                            style: TextStyle(
+                            status,
+                            style: const TextStyle(
                               color: Colors.white,
                               fontSize: 9,
                               fontWeight: FontWeight.w800,

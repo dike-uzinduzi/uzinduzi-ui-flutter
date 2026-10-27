@@ -49,13 +49,22 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
   // EcoCash-specific phone (independent of shipping phone)
   final _ecocashPhone = TextEditingController();
 
+  // Other-method note
+  final _otherMethodNote = TextEditingController();
+
   String _country = 'Zimbabwe';
   String _paymentMethod = 'ECOCASH';
   bool _busy = false;
   String? _error;
 
+  // Uzinduzi WhatsApp number (digits only, no + or spaces)
+  static const _uzinduziWhatsApp = '263714219938';
+
   bool get _requiresShipping => widget.tier != null;
   bool get _isEcocash => _paymentMethod == 'ECOCASH';
+ bool get _isCashPickup => _paymentMethod == 'CASH_PICKUP';
+  bool get _isOther => _paymentMethod == 'OTHER';
+  bool get _isOffPlatform => _isCashPickup || _isOther;
 
   @override
   void dispose() {
@@ -67,11 +76,47 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
     _city.dispose();
     _postalCode.dispose();
     _ecocashPhone.dispose();
+    _otherMethodNote.dispose();
     super.dispose();
+  }
+
+  /// Opens WhatsApp to the Uzinduzi support line with a pre-filled message.
+  Future<void> _openWhatsApp() async {
+    final note = _otherMethodNote.text.trim();
+    final methodLabel = _isCashPickup ? 'Cash pickup' : 'Other method';
+
+    final message = Uri.encodeComponent(
+      'Hi Uzinduzi, I\'d like to support '
+      '"${widget.albumTitle}" by ${widget.artistName} '
+      'with \$${widget.amount.toStringAsFixed(2)} via $methodLabel.'
+      '${note.isNotEmpty ? '\n\nPreferred method: $note' : ''}',
+    );
+
+    final uri = Uri.parse('https://wa.me/$_uzinduziWhatsApp?text=$message');
+
+    try {
+      final ok = await launchUrl(uri, mode: LaunchMode.externalApplication);
+      if (!ok && mounted) {
+        setState(() => _error =
+            'Could not open WhatsApp. Message us directly at +263 71 421 9938');
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _error =
+            'Could not open WhatsApp. Message us directly at +263 71 421 9938');
+      }
+    }
   }
 
   Future<void> _submit() async {
     setState(() => _error = null);
+
+    // Off-platform methods → open WhatsApp instead of going through the API.
+    if (_isOffPlatform) {
+      if (_requiresShipping && !_formKey.currentState!.validate()) return;
+      await _openWhatsApp();
+      return;
+    }
 
     // 1. Shipping validation
     if (_requiresShipping) {
@@ -177,6 +222,18 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
     }
   }
 
+  String get _ctaLabel {
+    if (_isOffPlatform) {
+      return 'Contact us on WhatsApp';
+    }
+    return 'Pay \$${widget.amount.toStringAsFixed(2)}';
+  }
+
+  IconData get _ctaIcon {
+    if (_isOffPlatform) return Icons.chat_bubble_outline;
+    return Icons.lock_outline;
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -227,7 +284,8 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                   decoration: BoxDecoration(
                     color: kUzinduziRed.withValues(alpha: 0.06),
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: kUzinduziRed.withValues(alpha: 0.15)),
+                    border:
+                        Border.all(color: kUzinduziRed.withValues(alpha: 0.15)),
                   ),
                   child: const Row(
                     children: [
@@ -236,7 +294,8 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                       Expanded(
                         child: Text(
                           'No physical plaque at this amount — just a heartfelt thank you.',
-                          style: TextStyle(fontSize: 13, color: kUzinduziBlack),
+                          style: TextStyle(
+                              fontSize: 13, color: kUzinduziBlack),
                         ),
                       ),
                     ],
@@ -248,7 +307,10 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
               // Payment method
               PaymentPicker(
                 value: _paymentMethod,
-                onChanged: (v) => setState(() => _paymentMethod = v),
+                onChanged: (v) => setState(() {
+                  _paymentMethod = v;
+                  _error = null;
+                }),
               ),
 
               // EcoCash phone field (only when EcoCash selected)
@@ -259,14 +321,16 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                   decoration: BoxDecoration(
                     color: kUzinduziRed.withValues(alpha: 0.05),
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: kUzinduziRed.withValues(alpha: 0.15)),
+                    border:
+                        Border.all(color: kUzinduziRed.withValues(alpha: 0.15)),
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       const Row(
                         children: [
-                          Icon(Icons.phone_android, color: kUzinduziRed, size: 18),
+                          Icon(Icons.phone_android,
+                              color: kUzinduziRed, size: 18),
                           SizedBox(width: 8),
                           Text(
                             'EcoCash number',
@@ -281,14 +345,16 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                       const SizedBox(height: 4),
                       const Text(
                         'Pesepay will send a payment prompt to this number.',
-                        style: TextStyle(fontSize: 12, color: kUzinduziGrey),
+                        style:
+                            TextStyle(fontSize: 12, color: kUzinduziGrey),
                       ),
                       const SizedBox(height: 12),
                       TextFormField(
                         controller: _ecocashPhone,
                         keyboardType: TextInputType.phone,
                         inputFormatters: [
-                          FilteringTextInputFormatter.allow(RegExp(r'[\d+\s-]')),
+                          FilteringTextInputFormatter.allow(
+                              RegExp(r'[\d+\s-]')),
                         ],
                         decoration: const InputDecoration(
                           labelText: 'EcoCash number',
@@ -296,6 +362,73 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                           prefixIcon: Icon(Icons.phone_outlined),
                         ),
                       ),
+                    ],
+                  ),
+                ),
+              ],
+
+              // Off-platform info
+              if (_isOffPlatform) ...[
+                const SizedBox(height: 20),
+                Container(
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: kUzinduziRed.withValues(alpha: 0.05),
+                    borderRadius: BorderRadius.circular(12),
+                    border:
+                        Border.all(color: kUzinduziRed.withValues(alpha: 0.15)),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Icon(
+                            _isCashPickup
+                                ? Icons.storefront_outlined
+                                : Icons.chat_bubble_outline,
+                            color: kUzinduziRed,
+                            size: 18,
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            _isCashPickup
+                                ? 'Cash pickup'
+                                : 'Other payment method',
+                            style: const TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w800,
+                              color: kUzinduziBlack,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        _isCashPickup
+                            ? 'We\'ll chat on WhatsApp to arrange a pickup '
+                                'location and time. Your support will be '
+                                'recorded once funds are received.'
+                            : 'Tell us how you plan to pay — WorldRemit, '
+                                'Western Union, or another method — and '
+                                'we\'ll chat on WhatsApp to complete it.',
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: kUzinduziGrey,
+                          height: 1.5,
+                        ),
+                      ),
+                      if (_isOther) ...[
+                        const SizedBox(height: 12),
+                        TextField(
+                          controller: _otherMethodNote,
+                          decoration: const InputDecoration(
+                            labelText: 'Preferred method',
+                            hintText: 'e.g. WorldRemit',
+                            prefixIcon: Icon(Icons.edit_outlined, size: 18),
+                          ),
+                        ),
+                      ],
                     ],
                   ),
                 ),
@@ -310,16 +443,19 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                   decoration: BoxDecoration(
                     color: kStatusFailed.withValues(alpha: 0.08),
                     borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: kStatusFailed.withValues(alpha: 0.3)),
+                    border: Border.all(
+                        color: kStatusFailed.withValues(alpha: 0.3)),
                   ),
                   child: Row(
                     children: [
-                      const Icon(Icons.error_outline, color: kStatusFailed, size: 20),
+                      const Icon(Icons.error_outline,
+                          color: kStatusFailed, size: 20),
                       const SizedBox(width: 10),
                       Expanded(
                         child: Text(
                           _error!,
-                          style: const TextStyle(fontSize: 13, color: kStatusFailed),
+                          style: const TextStyle(
+                              fontSize: 13, color: kStatusFailed),
                         ),
                       ),
                     ],
@@ -328,24 +464,31 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
 
               SizedBox(
                 height: 52,
-                child: ElevatedButton(
+                child: ElevatedButton.icon(
                   onPressed: _busy ? null : _submit,
-                  child: _busy
+                  icon: _busy
                       ? const SizedBox(
-                          height: 22,
-                          width: 22,
+                          height: 20,
+                          width: 20,
                           child: CircularProgressIndicator(
                             strokeWidth: 2.5,
                             valueColor: AlwaysStoppedAnimation(Colors.white),
                           ),
                         )
+                      : Icon(_ctaIcon, size: 18),
+                  label: _busy
+                      ? const SizedBox.shrink()
                       : Text(
-                          'Pay \$${widget.amount.toStringAsFixed(2)}',
+                          _ctaLabel,
                           style: const TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.w700,
                           ),
                         ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor:
+                        _isOffPlatform ? kStatusLive : null,
+                  ),
                 ),
               ),
               const SizedBox(height: 24),

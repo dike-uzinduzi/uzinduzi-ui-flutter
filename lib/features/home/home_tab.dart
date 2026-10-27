@@ -2,6 +2,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/format.dart';
 import '../../core/routes.dart';
 import '../../core/theme.dart';
 import '../../widgets/uzinduzi_logo.dart';
@@ -63,7 +64,7 @@ class HomeTab extends ConsumerWidget {
               padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
               children: [
                 Text(
-                  'Welcome,  ${user?.userName ?? "there"}',
+                  'Welcome, ${_displayName(user?.userName)}',
                   style: const TextStyle(
                     fontSize: 22,
                     fontWeight: FontWeight.w800,
@@ -100,8 +101,7 @@ class HomeTab extends ConsumerWidget {
                   loading: () => const Padding(
                     padding: EdgeInsets.symmetric(vertical: 60),
                     child: Center(
-                      child:
-                          CircularProgressIndicator(color: kUzinduziRed),
+                      child: CircularProgressIndicator(color: kUzinduziRed),
                     ),
                   ),
                   error: (_, _) => const _EmptyHero(),
@@ -190,6 +190,14 @@ class HomeTab extends ConsumerWidget {
   }
 }
 
+/// Capitalises the first letter of the user's display name.
+/// Falls back to "there" if the name is empty.
+String _displayName(String? raw) {
+  final s = (raw ?? '').trim();
+  if (s.isEmpty) return 'there';
+  return '${s[0].toUpperCase()}${s.substring(1)}';
+}
+
 // ─────────────────────────────────────────────────────────────
 // AppBar avatar with dropdown menu
 // ─────────────────────────────────────────────────────────────
@@ -271,7 +279,7 @@ class _AvatarAction extends StatelessWidget {
         elevation: 8,
         onSelected: (action) => _onMenuSelected(context, action),
         itemBuilder: (context) => [
-          // ── Header ─────────────────────────────
+          // ── Header (name + masked email) ────────
           PopupMenuItem<_AvatarMenuAction>(
             enabled: false,
             height: 64,
@@ -287,7 +295,7 @@ class _AvatarAction extends StatelessWidget {
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         Text(
-                          displayName,
+                          _displayName(displayName),
                           overflow: TextOverflow.ellipsis,
                           style: const TextStyle(
                             fontSize: 14,
@@ -296,7 +304,7 @@ class _AvatarAction extends StatelessWidget {
                           ),
                         ),
                         Text(
-                          email,
+                          maskEmail(email),
                           overflow: TextOverflow.ellipsis,
                           style: const TextStyle(
                             fontSize: 11,
@@ -556,7 +564,7 @@ class _MenuRow extends StatelessWidget {
             ),
           ),
         ),
-        
+        if (badge != null) badge!,
         if (trailing != null)
           Text(
             trailing!,

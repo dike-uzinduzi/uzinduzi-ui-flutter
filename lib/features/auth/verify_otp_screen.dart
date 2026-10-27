@@ -1,5 +1,5 @@
 import 'dart:async';
-
+import '../../core/format.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -139,7 +139,7 @@ class _VerifyOtpScreenState extends ConsumerState<VerifyOtpScreen> {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    'We sent a 6-digit code to\n$_email',
+                   'We sent a 6-digit code to\n${maskEmail(_email)}',
                     textAlign: TextAlign.center,
                     style: const TextStyle(fontSize: 14, color: kUzinduziGrey),
                   ),

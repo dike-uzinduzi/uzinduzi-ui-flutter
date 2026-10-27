@@ -85,13 +85,18 @@ String _imageFor(PlaqueTier? t) {
           ),
         ),
         const SizedBox(height: 20),
-        if (tier!.benefits.isEmpty)
-          const Center(
-            child: Text(
-              'Physical plaque shipped to you',
-              style: TextStyle(fontSize: 13, color: kUzinduziGrey),
-            ),
-          )
+      if (tier!.benefits.isEmpty)
+  Center(
+    child: Text(
+      'This is a ${tier!.displayName.toLowerCase()}-tier plaque',
+      style: const TextStyle(
+        fontSize: 13,
+        color: kUzinduziGrey,
+        height: 1.5,
+      ),
+      textAlign: TextAlign.center,
+    ),
+  )
         else
           ...tier!.benefits.map((b) => _BenefitRow(text: b)),
       ],

@@ -18,7 +18,11 @@ class AppSidebar extends ConsumerWidget {
   static const _items = [
     (icon: Icons.home_outlined, activeIcon: Icons.home, label: 'Home'),
     (icon: Icons.album_outlined, activeIcon: Icons.album, label: 'Albums'),
-    (icon: Icons.workspace_premium_outlined, activeIcon: Icons.workspace_premium, label: 'Plaques'),
+    (
+      icon: Icons.workspace_premium_outlined,
+      activeIcon: Icons.workspace_premium,
+      label: 'Plaques'
+    ),
     (icon: Icons.person_outline, activeIcon: Icons.person, label: 'Profile'),
   ];
 
@@ -72,7 +76,7 @@ class AppSidebar extends ConsumerWidget {
 
           const Divider(height: 1, color: kUzinduziDivider),
 
-          // User block
+          // User block — name only, no email
           Padding(
             padding: const EdgeInsets.all(16),
             child: Column(
@@ -87,38 +91,36 @@ class AppSidebar extends ConsumerWidget {
                         color: kUzinduziRed.withValues(alpha: 0.1),
                         shape: BoxShape.circle,
                       ),
-                      child: const Icon(Icons.person, size: 18, color: kUzinduziRed),
+                      child: const Icon(
+                        Icons.person,
+                        size: 18,
+                        color: kUzinduziRed,
+                      ),
                     ),
                     const SizedBox(width: 10),
                     Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            user?.userName ?? '',
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w700,
-                              color: kUzinduziBlack,
-                            ),
-                          ),
-                          Text(
-                            user?.email ?? '',
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(fontSize: 11, color: kUzinduziGrey),
-                          ),
-                        ],
+                      child: Text(
+                        _displayName(user?.userName),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700,
+                          color: kUzinduziBlack,
+                        ),
                       ),
                     ),
                   ],
                 ),
                 const SizedBox(height: 12),
                 TextButton.icon(
-                  onPressed: () => ref.read(authControllerProvider.notifier).logout(),
-                  icon: const Icon(Icons.logout, size: 16, color: kUzinduziRed),
+                  onPressed: () =>
+                      ref.read(authControllerProvider.notifier).logout(),
+                  icon: const Icon(
+                    Icons.logout,
+                    size: 16,
+                    color: kUzinduziRed,
+                  ),
                   label: const Text(
                     'Logout',
                     style: TextStyle(
@@ -142,6 +144,14 @@ class AppSidebar extends ConsumerWidget {
   }
 }
 
+/// Capitalises the first letter of the user's display name.
+/// Falls back to "User" if the name is empty.
+String _displayName(String? raw) {
+  final s = (raw ?? '').trim();
+  if (s.isEmpty) return 'User';
+  return '${s[0].toUpperCase()}${s.substring(1)}';
+}
+
 class _SidebarItem extends StatelessWidget {
   final IconData icon;
   final IconData activeIcon;
@@ -162,7 +172,9 @@ class _SidebarItem extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
       child: Material(
-        color: selected ? kUzinduziRed.withValues(alpha: 0.08) : Colors.transparent,
+        color: selected
+            ? kUzinduziRed.withValues(alpha: 0.08)
+            : Colors.transparent,
         borderRadius: BorderRadius.circular(10),
         child: InkWell(
           onTap: onTap,
@@ -181,7 +193,8 @@ class _SidebarItem extends StatelessWidget {
                   label,
                   style: TextStyle(
                     fontSize: 14,
-                    fontWeight: selected ? FontWeight.w800 : FontWeight.w600,
+                    fontWeight:
+                        selected ? FontWeight.w800 : FontWeight.w600,
                     color: selected ? kUzinduziRed : kUzinduziBlack,
                   ),
                 ),
