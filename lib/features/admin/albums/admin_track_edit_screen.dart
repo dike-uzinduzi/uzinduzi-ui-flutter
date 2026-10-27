@@ -41,6 +41,8 @@ class _AdminTrackEditScreenState
   late final TextEditingController _specialCredits;
   late final TextEditingController _description;
 
+  DateTime? _releaseDate;
+  bool _isPublished = true;
   bool _saving = false;
 
   bool get _isEditing => widget.track != null;
@@ -69,6 +71,9 @@ class _AdminTrackEditScreenState
         TextEditingController(text: t?.masteringEngineer ?? '');
     _specialCredits = TextEditingController(text: t?.specialCredits ?? '');
     _description = TextEditingController(text: t?.trackDescription ?? '');
+
+    _releaseDate = t?.releaseDate;
+    _isPublished = t?.isPublished ?? true;
   }
 
   @override
@@ -114,8 +119,13 @@ class _AdminTrackEditScreenState
         'masteringEngineer': _emptyOrNull(_masteringEngineer.text),
         'specialCredits': _emptyOrNull(_specialCredits.text),
         'trackDescription': _emptyOrNull(_description.text),
-        'isPublished': true,
+        'isPublished': _isPublished,
       };
+
+      if (_releaseDate != null) {
+        body['releaseDate'] =
+            _releaseDate!.toIso8601String().split('T').first;
+      }
 
       final api = ref.read(apiClientProvider);
       final res = _isEditing
@@ -150,6 +160,19 @@ class _AdminTrackEditScreenState
       );
     } finally {
       if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  Future<void> _pickReleaseDate() async {
+    final now = DateTime.now();
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _releaseDate ?? now,
+      firstDate: DateTime(1900),
+      lastDate: DateTime(now.year + 5),
+    );
+    if (picked != null) {
+      setState(() => _releaseDate = picked);
     }
   }
 
@@ -242,6 +265,32 @@ class _AdminTrackEditScreenState
                   ],
                 ),
                 const SizedBox(height: 14),
+                InkWell(
+                  onTap: _pickReleaseDate,
+                  borderRadius: BorderRadius.circular(8),
+                  child: InputDecorator(
+                    decoration: InputDecoration(
+                      labelText: 'Release date',
+                      suffixIcon: _releaseDate != null
+                          ? IconButton(
+                              icon: const Icon(Icons.close, size: 18),
+                              tooltip: 'Clear',
+                              onPressed: () =>
+                                  setState(() => _releaseDate = null),
+                            )
+                          : const Icon(
+                              Icons.calendar_today_outlined,
+                              size: 16,
+                            ),
+                    ),
+                    child: Text(
+                      _releaseDate == null
+                          ? 'Not set'
+                          : _releaseDate!.toIso8601String().split('T').first,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 14),
                 TextFormField(
                   controller: _description,
                   maxLines: 3,
@@ -249,6 +298,18 @@ class _AdminTrackEditScreenState
                     labelText: 'Description',
                     alignLabelWithHint: true,
                   ),
+                ),
+
+                const SizedBox(height: 16),
+                SwitchListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: const Text('Published'),
+                  subtitle: const Text(
+                    'Unpublished tracks are hidden from the public app',
+                    style: TextStyle(fontSize: 12),
+                  ),
+                  value: _isPublished,
+                  onChanged: (v) => setState(() => _isPublished = v),
                 ),
 
                 const SizedBox(height: 24),
@@ -317,7 +378,6 @@ class _AdminTrackEditScreenState
   }
 }
 
-
 class AdminTrackEditSheet extends StatelessWidget {
   const AdminTrackEditSheet({
     super.key,
@@ -330,7 +390,6 @@ class AdminTrackEditSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Constrain height so the sheet scrolls well on tall forms
     final maxH = MediaQuery.of(context).size.height * 0.92;
     return ConstrainedBox(
       constraints: BoxConstraints(maxHeight: maxH),
@@ -341,6 +400,7 @@ class AdminTrackEditSheet extends StatelessWidget {
     );
   }
 }
+
 class _SectionLabel extends StatelessWidget {
   const _SectionLabel(this.text);
   final String text;

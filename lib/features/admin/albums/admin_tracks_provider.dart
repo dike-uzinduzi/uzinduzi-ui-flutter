@@ -17,6 +17,7 @@ class AdminTrack {
   final String? mixingEngineer;
   final String? specialCredits;
   final String? trackDescription;
+  final DateTime? releaseDate;
   final bool isPublished;
 
   const AdminTrack({
@@ -34,6 +35,7 @@ class AdminTrack {
     this.mixingEngineer,
     this.specialCredits,
     this.trackDescription,
+    this.releaseDate,
     this.isPublished = true,
   });
 
@@ -52,6 +54,9 @@ class AdminTrack {
         mixingEngineer: j['mixingEngineer'] as String?,
         specialCredits: j['specialCredits'] as String?,
         trackDescription: j['trackDescription'] as String?,
+        releaseDate: j['releaseDate'] != null
+            ? DateTime.tryParse(j['releaseDate'].toString())
+            : null,
         isPublished: j['isPublished'] as bool? ?? true,
       );
 

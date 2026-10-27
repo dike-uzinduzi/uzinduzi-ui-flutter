@@ -42,6 +42,9 @@ class _AdminAlbumEditScreenState extends ConsumerState<AdminAlbumEditScreen> {
   bool _toggling = false;
   bool _uploadingCover = false;
 
+  bool _isDemo = false;
+  List<String> _genreNames = [];
+
   Map<String, dynamic>? _album;
 
   @override
@@ -93,6 +96,18 @@ class _AdminAlbumEditScreenState extends ConsumerState<AdminAlbumEditScreen> {
       _releaseDate = album['release_date'] != null
           ? DateTime.tryParse(album['release_date'].toString())
           : null;
+
+      _isDemo = album['isDemo'] == true;
+
+      // Genres may arrive under 'Genres' (Sequelize alias) or 'genres'
+      final rawGenres = album['Genres'] ?? album['genres'];
+      _genreNames = (rawGenres is List)
+          ? rawGenres
+              .whereType<Map>()
+              .map((g) => g['name']?.toString() ?? '')
+              .where((s) => s.isNotEmpty)
+              .toList()
+          : <String>[];
     } catch (e) {
       if (mounted) {
         await AuthErrorDialog.show(
@@ -121,6 +136,8 @@ class _AdminAlbumEditScreenState extends ConsumerState<AdminAlbumEditScreen> {
         'copyright_info': _copyright!.text.trim(),
         'credits': _credits!.text.trim(),
         'affiliation': _affiliation!.text.trim(),
+        'isDemo': _isDemo,
+        'genres': _genreNames,
       };
       if (_releaseDate != null) {
         body['release_date'] =
@@ -141,6 +158,7 @@ class _AdminAlbumEditScreenState extends ConsumerState<AdminAlbumEditScreen> {
         const SnackBar(content: Text('Album saved')),
       );
       ref.invalidate(adminAlbumsProvider);
+      await _load();
     } catch (e) {
       if (!mounted) return;
       await AuthErrorDialog.show(
@@ -227,6 +245,40 @@ class _AdminAlbumEditScreenState extends ConsumerState<AdminAlbumEditScreen> {
       );
       return false;
     }
+  }
+
+  // ─── Genre picker ───────────────────────────────────────────
+  Future<void> _pickGenre() async {
+    final ctrl = TextEditingController();
+    final name = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Add genre'),
+        content: TextField(
+          controller: ctrl,
+          autofocus: true,
+          textCapitalization: TextCapitalization.words,
+          decoration: const InputDecoration(
+            labelText: 'Genre name',
+            hintText: 'e.g. Afro-pop, Dancehall, Hip-hop',
+          ),
+          onSubmitted: (v) => Navigator.of(ctx).pop(v.trim()),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(null),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(ctrl.text.trim()),
+            child: const Text('Add'),
+          ),
+        ],
+      ),
+    );
+    if (name == null || name.isEmpty || !mounted) return;
+    if (_genreNames.contains(name)) return;
+    setState(() => _genreNames.add(name));
   }
 
   // ─── Cover upload ───────────────────────────────────────────
@@ -480,7 +532,7 @@ class _AdminAlbumEditScreenState extends ConsumerState<AdminAlbumEditScreen> {
                         ],
                       ),
 
-                      // ── Danger zone (soft-delete / restore + hard-delete) ──
+                      // ── Danger zone ────────────────────
                       const SizedBox(height: 20),
                       const Divider(color: kUzinduziDivider),
                       const SizedBox(height: 12),
@@ -572,6 +624,44 @@ class _AdminAlbumEditScreenState extends ConsumerState<AdminAlbumEditScreen> {
                           labelText: 'Description',
                           alignLabelWithHint: true,
                         ),
+                      ),
+
+                      // ── Genres ─────────────────────────
+                      const SizedBox(height: 16),
+                      _SectionLabel('Genres'),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: [
+                          for (final g in _genreNames)
+                            Chip(
+                              label: Text(g),
+                              deleteIcon:
+                                  const Icon(Icons.close, size: 16),
+                              onDeleted: () => setState(
+                                  () => _genreNames.remove(g)),
+                            ),
+                          ActionChip(
+                            avatar: const Icon(Icons.add, size: 16),
+                            label: const Text('Add genre'),
+                            onPressed: _pickGenre,
+                          ),
+                        ],
+                      ),
+
+                      // ── Visibility: demo ───────────────
+                      const SizedBox(height: 16),
+                      _SectionLabel('Visibility'),
+                      SwitchListTile(
+                        contentPadding: EdgeInsets.zero,
+                        title: const Text('Demo album'),
+                        subtitle: const Text(
+                          'Only demo accounts can interact with this album',
+                          style: TextStyle(fontSize: 12),
+                        ),
+                        value: _isDemo,
+                        onChanged: (v) =>
+                            setState(() => _isDemo = v),
                       ),
 
                       const SizedBox(height: 24),
@@ -972,6 +1062,7 @@ class _SectionLabel extends StatelessWidget {
     );
   }
 }
+
 class _ActionToggle extends StatelessWidget {
   const _ActionToggle({
     required this.label,

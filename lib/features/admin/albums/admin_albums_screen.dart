@@ -89,6 +89,8 @@ class _AdminAlbumsScreenState extends ConsumerState<AdminAlbumsScreen> {
                     ref.read(adminAlbumsQueryProvider.notifier).setPublished(v),
                 onFeaturedChanged: (v) =>
                     ref.read(adminAlbumsQueryProvider.notifier).setFeatured(v),
+                onDemoChanged: (v) =>
+                    ref.read(adminAlbumsQueryProvider.notifier).setDemo(v),
                 onDeletedChanged: (v) =>
                     ref.read(adminAlbumsQueryProvider.notifier).setDeleted(v),
               ),
@@ -184,6 +186,7 @@ class _Filters extends StatelessWidget {
     required this.onAlbumTypeChanged,
     required this.onPublishedChanged,
     required this.onFeaturedChanged,
+    required this.onDemoChanged,
     required this.onDeletedChanged,
   });
 
@@ -193,6 +196,7 @@ class _Filters extends StatelessWidget {
   final ValueChanged<String> onAlbumTypeChanged;
   final ValueChanged<bool?> onPublishedChanged;
   final ValueChanged<bool?> onFeaturedChanged;
+  final ValueChanged<bool?> onDemoChanged;
   final ValueChanged<bool> onDeletedChanged;
 
   @override
@@ -251,6 +255,11 @@ class _Filters extends StatelessWidget {
           label: 'Featured',
           value: query.featured,
           onChanged: onFeaturedChanged,
+        ),
+        _TriToggle(
+          label: 'Demo',
+          value: query.demo,
+          onChanged: onDemoChanged,
         ),
         Row(
           mainAxisSize: MainAxisSize.min,

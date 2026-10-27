@@ -9,6 +9,7 @@ class AdminAlbumsQuery {
   final bool? published;
   final bool? featured;
   final bool deleted;
+  final bool? demo;         // ← NEW
   final int page;
   final int limit;
 
@@ -18,6 +19,7 @@ class AdminAlbumsQuery {
     this.published,
     this.featured,
     this.deleted = false,
+    this.demo,              // ← NEW (default null = All)
     this.page = 1,
     this.limit = 25,
   });
@@ -28,6 +30,7 @@ class AdminAlbumsQuery {
     Object? published = _sentinel,
     Object? featured = _sentinel,
     bool? deleted,
+    Object? demo = _sentinel,   // ← NEW
     int? page,
     int? limit,
   }) =>
@@ -39,6 +42,7 @@ class AdminAlbumsQuery {
         featured:
             identical(featured, _sentinel) ? this.featured : featured as bool?,
         deleted: deleted ?? this.deleted,
+        demo: identical(demo, _sentinel) ? this.demo : demo as bool?,   // ← NEW
         page: page ?? this.page,
         limit: limit ?? this.limit,
       );
@@ -49,6 +53,7 @@ class AdminAlbumsQuery {
         if (published != null) 'published': published.toString(),
         if (featured != null) 'featured': featured.toString(),
         'deleted': deleted.toString(),
+        if (demo != null) 'demo': demo.toString(),   // ← NEW
         'page': page.toString(),
         'limit': limit.toString(),
       };
@@ -80,6 +85,7 @@ class AdminAlbumsQueryNotifier extends StateNotifier<AdminAlbumsQuery> {
   void setPublished(bool? v) => state = state.copyWith(published: v, page: 1);
   void setFeatured(bool? v) => state = state.copyWith(featured: v, page: 1);
   void setDeleted(bool v) => state = state.copyWith(deleted: v, page: 1);
+  void setDemo(bool? v) => state = state.copyWith(demo: v, page: 1);   // ← NEW
   void setPage(int p) => state = state.copyWith(page: p);
   void reset() => state = const AdminAlbumsQuery();
 }

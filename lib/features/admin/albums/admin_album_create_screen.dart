@@ -5,6 +5,7 @@ import '../../../core/api_client.dart';
 import '../../../core/errors.dart';
 import '../../../core/theme.dart';
 import '../../../widgets/auth_error_dialog.dart';
+import 'admin_album_edit_screen.dart';
 import 'admin_albums_provider.dart';
 import 'admin_artists_picker_provider.dart';
 
@@ -32,6 +33,8 @@ class _AdminAlbumCreateScreenState
   DateTime _releaseDate = DateTime.now();
   bool _isPublished = true;
   bool _isFeatured = false;
+  bool _isDemo = false;
+  List<String> _genreNames = [];
   bool _saving = false;
 
   @override
@@ -43,6 +46,39 @@ class _AdminAlbumCreateScreenState
     _credits.dispose();
     _affiliation.dispose();
     super.dispose();
+  }
+
+  Future<void> _pickGenre() async {
+    final ctrl = TextEditingController();
+    final name = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Add genre'),
+        content: TextField(
+          controller: ctrl,
+          autofocus: true,
+          textCapitalization: TextCapitalization.words,
+          decoration: const InputDecoration(
+            labelText: 'Genre name',
+            hintText: 'e.g. Afro-pop, Dancehall, Hip-hop',
+          ),
+          onSubmitted: (v) => Navigator.of(ctx).pop(v.trim()),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(null),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(ctrl.text.trim()),
+            child: const Text('Add'),
+          ),
+        ],
+      ),
+    );
+   if (name == null || name.isEmpty || !mounted) return;
+if (_genreNames.contains(name)) return;
+setState(() => _genreNames = [..._genreNames, name]);
   }
 
   Future<void> _save() async {
@@ -73,6 +109,8 @@ class _AdminAlbumCreateScreenState
           'release_date': _releaseDate.toIso8601String().split('T').first,
           'is_published': _isPublished,
           'is_featured': _isFeatured,
+          'isDemo': _isDemo,
+          'genres': _genreNames,
         },
       );
 
@@ -83,12 +121,39 @@ class _AdminAlbumCreateScreenState
         throw AppError(msg ?? 'Create failed');
       }
 
+     final body = res.data is Map
+    ? Map<String, dynamic>.from(res.data as Map)
+    : <String, dynamic>{};
+
+final newId = (body['album'] is Map)
+    ? (body['album'] as Map)['id']?.toString()
+    : (body['data'] is Map
+        ? (body['data'] as Map)['id']?.toString()
+        : null);
+
       if (!mounted) return;
       ref.invalidate(adminAlbumsProvider);
+
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Album created')),
+        SnackBar(
+          content: Text(
+            newId != null && newId.isNotEmpty
+                ? 'Album created. Upload a cover next.'
+                : 'Album created',
+          ),
+        ),
       );
-      Navigator.of(context).pop(true);
+
+      // Jump into edit so the admin can upload the cover.
+      if (newId != null && newId.isNotEmpty) {
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(
+            builder: (_) => AdminAlbumEditScreen(albumId: newId),
+          ),
+        );
+      } else {
+        Navigator.of(context).pop(true);
+      }
     } catch (e) {
       if (!mounted) return;
       await AuthErrorDialog.show(
@@ -220,6 +285,27 @@ class _AdminAlbumCreateScreenState
                   ),
                 ),
 
+                const SizedBox(height: 16),
+                _SectionLabel('Genres'),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    for (final g in _genreNames)
+                      Chip(
+                        label: Text(g),
+                        deleteIcon: const Icon(Icons.close, size: 16),
+                        onDeleted: () =>
+                            setState(() => _genreNames.remove(g)),
+                      ),
+                    ActionChip(
+                      avatar: const Icon(Icons.add, size: 16),
+                      label: const Text('Add genre'),
+                      onPressed: _pickGenre,
+                    ),
+                  ],
+                ),
+
                 const SizedBox(height: 24),
                 _SectionLabel('Rights & credits'),
                 TextFormField(
@@ -263,6 +349,16 @@ class _AdminAlbumCreateScreenState
                   ),
                   value: _isFeatured,
                   onChanged: (v) => setState(() => _isFeatured = v),
+                ),
+                SwitchListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: const Text('Demo album'),
+                  subtitle: const Text(
+                    'Only demo accounts can interact with this album',
+                    style: TextStyle(fontSize: 12),
+                  ),
+                  value: _isDemo,
+                  onChanged: (v) => setState(() => _isDemo = v),
                 ),
                 const SizedBox(height: 32),
               ],
