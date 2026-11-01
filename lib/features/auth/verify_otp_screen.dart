@@ -68,8 +68,11 @@ class _VerifyOtpScreenState extends ConsumerState<VerifyOtpScreen> {
           .pushNamedAndRemoveUntil(AppRoutes.home, (_) => false);
     } catch (e) {
       if (!mounted) return;
+      final base = e is AppError
+          ? e.message
+          : 'We couldn\'t verify that code. Please try again.';
       final message =
-          e is AppError ? e.message : 'We couldn\'t verify that code. Please try again.';
+          '$base\n\nStill not seeing the email? Check your spam or junk folder.';
 
       await AuthErrorDialog.show(
         context,
@@ -92,12 +95,17 @@ class _VerifyOtpScreenState extends ConsumerState<VerifyOtpScreen> {
       _startCooldown(60);
       // Non-error notification — SnackBar is appropriate here
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('A new code has been sent to your email.')),
+        const SnackBar(
+          content: Text(
+            'A new code has been sent. Check your spam folder if you don\'t see it.',
+          ),
+        ),
       );
     } catch (e) {
       if (!mounted) return;
-      final message =
-          e is AppError ? e.message : 'We couldn\'t resend the code. Please try again.';
+      final message = e is AppError
+          ? e.message
+          : 'We couldn\'t resend the code. Please try again.';
 
       await AuthErrorDialog.show(
         context,
@@ -139,7 +147,8 @@ class _VerifyOtpScreenState extends ConsumerState<VerifyOtpScreen> {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                   'We sent a 6-digit code to\n${maskEmail(_email)}',
+                    'We sent a 6-digit code to\n${maskEmail(_email)}\n\n'
+                    'Can\'t find it? Check your spam or junk folder.',
                     textAlign: TextAlign.center,
                     style: const TextStyle(fontSize: 14, color: kUzinduziGrey),
                   ),
